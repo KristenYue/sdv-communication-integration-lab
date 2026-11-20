@@ -92,10 +92,16 @@ std::string VehicleServiceRuntime::fingerprint(const ServiceRequest& request) {
         output << "none";
     } else if (const auto* query = std::get_if<GetVehicleSnapshotRequest>(&request.payload)) {
         output << "snapshot:" << query->now_ms << ':' << query->max_age_ms;
+    } else if (const auto* command = std::get_if<SetDoorLocksRequest>(&request.payload)) {
+        output << "door-locks:" << static_cast<unsigned int>(command->door_mask) << ':'
+               << (command->lock ? '1' : '0');
     } else {
-        const auto& command = std::get<SetDoorLocksRequest>(request.payload);
-        output << "door-locks:" << static_cast<unsigned int>(command.door_mask) << ':'
-               << (command.lock ? '1' : '0');
+        const auto& telemetry = std::get<TelemetryUploadRequest>(request.payload);
+        output << "telemetry:" << telemetry.node_id << ':' << telemetry.payload.size() << ':';
+        for (const auto byte : telemetry.payload) {
+            output << static_cast<char>("0123456789abcdef"[byte >> 4U])
+                   << static_cast<char>("0123456789abcdef"[byte & 0x0FU]);
+        }
     }
     return output.str();
 }

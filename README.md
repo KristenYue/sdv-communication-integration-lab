@@ -80,6 +80,14 @@ Windows localhost实测30个独立指令：第一服务进程Handler执行30次�
 
 该结果验证的是合成车辆服务上的“响应丢失—客户端超时—服务重启—同ID重试”组合语义，不代表物理车载以太网、真实门锁执行器、断电恢复或量产SOME/IP栈。
 
+## C++运行时性能矩阵
+
+类型化`vehicle.telemetry/Upload`服务用于测量运行时数据路径。矩阵包含100/500/1000 Hz三档聚合频率、64/256/1024 B三档载荷和1/4/8个并发节点，共27个Release构建单元；每个单元创建独立运行时，避免历史幂等缓存影响后续结果。
+
+Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成率95.63%；所有单元中最差p50/p95/p99分别为181.9/326.5/389.0微秒，最高进程CPU 85.56%，最高常驻内存7.58 MiB。最差p99来自1000 Hz、1024 B、8节点单元。原始27格数据见`benchmarks/windows-runtime-performance-matrix-v1.json`，方法见[性能矩阵说明](docs/PERFORMANCE_MATRIX.md)。
+
+这些数字仅覆盖进程内C++运行时的请求构造、语义指纹、准入、Handler调用、终态缓存和Trace，不代表CAN、SocketCAN、UDP、SOME/IP、ECU或真实车辆网络时延，也不构成硬实时保证。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。

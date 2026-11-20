@@ -66,6 +66,8 @@ State-changing methods may additionally use the append-only recovery journal. A 
 Concurrent callers are coordinated by an in-flight Request ID table and condition variable. Identical followers wait and replay one terminal result; conflicting fingerprints are rejected. A configurable active-Handler bound provides `QUEUE_FULL` and Deadline-aware `QUEUE_TIMEOUT` backpressure. This is caller-thread admission control rather than an internal worker scheduler; details are in [CONCURRENCY_SEMANTICS.md](CONCURRENCY_SEMANTICS.md).
 
 The bounded SOME/IP path also exposes a synthetic `vehicle.body/SetDoorLocks` method for recovery experiments. The fault harness may execute and journal the request while intentionally dropping the UDP response. A restarted server loads the same journal and replays the typed response for the same Client/Session-derived Request ID without invoking the Handler again. This models an uncertain network outcome over localhost, not a physical actuator transaction.
+
+The performance path uses a separate typed `vehicle.telemetry/Upload` method and a fresh runtime per matrix cell. It measures in-process runtime work only; the transport paths remain outside those latency numbers. Methodology and the full boundary are in [PERFORMANCE_MATRIX.md](PERFORMANCE_MATRIX.md).
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |

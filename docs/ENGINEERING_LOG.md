@@ -76,3 +76,21 @@ Service lookup, method lookup and current permission validation now precede idem
 ### Lesson
 
 Idempotency controls execution identity; it must not become an authorization shortcut. Admission policy is evaluated for every attempt, including cached replays.
+
+## 2026-11-20 - Rejected invalid Windows CPU measurements
+
+### Observation
+
+The first Release performance matrix reported process CPU near 108% for nearly every cell, including low-frequency cells. The consistency was implausible for the measured workload.
+
+### Cause
+
+The benchmark used `std::clock()`. Its MSVC behavior did not provide the process user-plus-kernel CPU measurement required by this evidence contract, so dividing it by wall time produced a misleading metric.
+
+### Fix
+
+Windows CPU collection now uses `GetProcessTimes` and sums user plus kernel time. Linux retains the standard process CPU clock. The invalid matrix was overwritten and none of its CPU values were retained in project claims.
+
+### Lesson
+
+Benchmark instrumentation is production code. A plausible-looking percentage is not evidence until the platform-specific clock semantics match the metric definition.

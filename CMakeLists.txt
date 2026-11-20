@@ -61,6 +61,12 @@ target_link_libraries(sdv_restart_recovery_evidence PRIVATE sdv_core)
 add_executable(sdv_concurrency_evidence cpp/src/concurrency_evidence.cpp)
 target_link_libraries(sdv_concurrency_evidence PRIVATE sdv_core)
 
+add_executable(sdv_performance_matrix cpp/src/performance_matrix.cpp)
+target_link_libraries(sdv_performance_matrix PRIVATE sdv_core)
+if(WIN32)
+  target_link_libraries(sdv_performance_matrix PRIVATE psapi)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
   target_link_libraries(sdv_socketcan_gateway PRIVATE sdv_core)

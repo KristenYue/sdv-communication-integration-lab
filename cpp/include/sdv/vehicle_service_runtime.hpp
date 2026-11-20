@@ -34,9 +34,20 @@ struct DoorLockResult {
     bool locked{false};
 };
 
+struct TelemetryUploadRequest {
+    std::uint32_t node_id{0};
+    std::vector<std::uint8_t> payload;
+};
+
+struct TelemetryUploadResult {
+    std::size_t accepted_bytes{0};
+};
+
 using ServiceRequestPayload =
-    std::variant<std::monostate, GetVehicleSnapshotRequest, SetDoorLocksRequest>;
-using ServiceResponsePayload = std::variant<std::monostate, VehicleSnapshot, DoorLockResult>;
+    std::variant<std::monostate, GetVehicleSnapshotRequest, SetDoorLocksRequest,
+                 TelemetryUploadRequest>;
+using ServiceResponsePayload =
+    std::variant<std::monostate, VehicleSnapshot, DoorLockResult, TelemetryUploadResult>;
 
 struct ServiceMethodDescriptor {
     std::string name;
