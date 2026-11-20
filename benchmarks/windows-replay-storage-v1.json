@@ -1,0 +1,45 @@
+{
+  "schema_version": "sdv-replay-storage-report-v1",
+  "data_boundary": "local_parquet_zstandard_content_addressed_files_and_sqlite_metadata;not_s3_or_postgresql_execution",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "pyarrow_version": "26.0.1",
+  "dataset": {
+    "schema_version": "sdv-replay-storage-v1",
+    "logical_dataset_sha256": "c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980",
+    "task_count": 300,
+    "unique_source_scenarios": 200,
+    "row_counts": {
+      "tasks": 300,
+      "frames": 1300,
+      "expected_states": 300
+    },
+    "objects": [
+      {
+        "logical_name": "expected_states",
+        "sha256": "d1e12aca224b50d49c6b81844a5e233d7e54dec4cbb3b24bcd9afeb66cb6b97c",
+        "size_bytes": 6021,
+        "row_count": 300,
+        "schema_version": "sdv-replay-storage-v1",
+        "uri": "sha256/d1/d1e12aca224b50d49c6b81844a5e233d7e54dec4cbb3b24bcd9afeb66cb6b97c.parquet"
+      },
+      {
+        "logical_name": "frames",
+        "sha256": "56d81287a37a3b824008d858b163be59a5b2588f5ddd12e84089a14c49f773bd",
+        "size_bytes": 11049,
+        "row_count": 1300,
+        "schema_version": "sdv-replay-storage-v1",
+        "uri": "sha256/56/56d81287a37a3b824008d858b163be59a5b2588f5ddd12e84089a14c49f773bd.parquet"
+      },
+      {
+        "logical_name": "tasks",
+        "sha256": "20cc6b91d3a29f9f635cd047337fb1429b382707e9abff1cc4690c6c020c2e75",
+        "size_bytes": 4187,
+        "row_count": 300,
+        "schema_version": "sdv-replay-storage-v1",
+        "uri": "sha256/20/20cc6b91d3a29f9f635cd047337fb1429b382707e9abff1cc4690c6c020c2e75.parquet"
+      }
+    ],
+    "total_stored_bytes": 21257,
+    "readback_verified": true
+  }
+}

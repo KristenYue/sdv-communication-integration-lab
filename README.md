@@ -94,7 +94,7 @@ Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成
 
 基线阶段和回放阶段分别启动全新的C++网关进程，记录有序返回码、接受状态、CAN ID、Trace ID和完整终态快照，并生成每任务SHA-256。Windows实测两阶段共提交2600帧，600/600次预期契约校验通过，300/300任务摘要一致、差异0项，基线与回放聚合SHA-256均为`385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1`。原始报告见`benchmarks/windows-replay-v1.json`，方法见[回放管线说明](docs/REPLAY_PIPELINE.md)。
 
-当前是JSONL任务集与JSON报告，还没有MCAP/Parquet、对象存储、PostgreSQL元数据或分布式Worker；不能描述成量产自动驾驶数据闭环平台。
+JSONL是规范输入与版本控制格式；下述本地数据层已增加Parquet与内容寻址对象，但还没有MCAP、S3/MinIO或PostgreSQL实机证据，不能描述成量产自动驾驶数据闭环平台。
 
 ### 租约Worker、心跳与Fencing
 
@@ -103,6 +103,14 @@ Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成
 Windows实测300个任务全部完成、300次预期契约全部通过，最终状态为300 completed、0 leased、0 pending；4个Worker分别提交68/78/85/69个任务，聚合输出SHA-256与单Worker基线保持一致。另有60组租约控制实验：60次心跳成功、60次提前接管被阻止、60次过期接管提交成功、60次旧Token提交被Fence、60次同结果提交幂等重放、60次不同结果冲突拒绝。原始报告见`benchmarks/windows-scheduled-replay-v1.json`，协议见[回放调度说明](docs/REPLAY_SCHEDULER.md)。
 
 SQLite和单机线程协调器只是可复现元数据原型，不代表PostgreSQL高可用、多主调度、跨主机时钟或网络分区能力。
+
+### Parquet列式数据与内容寻址对象
+
+300个回放任务被规范化为三张显式Arrow Schema表：300行任务索引、1300行有序车辆帧和300行期望车辆终态。三张表以Zstandard压缩写入Parquet，文件按SHA-256保存到两级内容寻址路径；SQLite事务登记逻辑名称、摘要、大小、行数、Schema版本和URI。读回时重新验证路径边界、文件摘要、物理Schema、行数和完整表内容。
+
+Windows本地实测生成3个不可变对象，总计21,257字节，三表读回全部一致；逻辑数据集SHA-256仍为`c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980`。原始报告见`benchmarks/windows-replay-storage-v1.json`，契约见[回放数据存储说明](docs/DATA_STORAGE.md)。
+
+该实现是本地内容寻址文件系统加SQLite元数据，不是云对象存储。仓库中的PostgreSQL migration仅固定迁移接口，尚未作为运行证据。
 
 ## SOME/IP有界跨进程链路
 
@@ -120,7 +128,7 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 
 python -m venv .venv
-python -m pip install -e '.[dev]'
+python -m pip install -e '.[dev,data]'
 python -m pytest
 ```
 

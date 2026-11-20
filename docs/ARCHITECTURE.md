@@ -54,12 +54,20 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | `vehicle.state` adapter | C++20 | Read-only service boundary over the gateway snapshot |
 | bounded SOME/IP codec | C++20 | Big-endian base-header encoding/decoding and malformed-message rejection |
 | SOME/IP UDP server/client | C++20 | Cross-process localhost request/response into the vehicle-service runtime |
+| frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
+| virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
+| DBC subset decoder | Python | Independent contract check for the project-supported message subset |
+| replay task recorder | Python | Versioned task IDs, embedded inputs, source lineage and dataset SHA-256 |
+| replay executor | Python + C++ process | Fresh-process baseline/replay, ordered event capture and terminal digest comparison |
+| replay job store | Python + SQLite WAL | Atomic leases, heartbeat, fencing token and idempotent result commit |
+| replay workers | Python threads + C++ processes | Leased task execution through independent gateway processes |
+| replay object store | Python + Arrow + SQLite | Explicit Parquet schemas, content-addressed files, metadata and verified readback |
 
 ## Idempotency boundary
 
 Completed runtime requests are indexed by Request ID and an exact semantic fingerprint over Principal, Service, Method and typed Payload. Service existence, method existence and the caller's current permission are checked before cache lookup, so replay cannot bypass authorization. An identical retry returns the cached typed response; a different fingerprint returns `REQUEST_ID_CONFLICT`. Retry-local Trace ID, permissions and Deadline do not change the operation identity. Post-dispatch uncertain outcomes are cached because repeating an operation whose side effects are unknown is unsafe.
 
-The default store is in-memory and invocation is sequential. It is not described as concurrent idempotency because an in-flight coordination protocol has not yet been implemented.
+The default terminal-result store is in-memory; state-changing methods can opt into the recovery journal described below. In-flight coordination is single-process and multi-threaded, not a distributed transaction protocol.
 
 State-changing methods may additionally use the append-only recovery journal. A flushed `BEGIN` precedes Handler dispatch and a `COMPLETE` follows it. Cleanly completed requests recover their typed response; an unmatched `BEGIN` recovers as `COMPLETION_UNKNOWN` and is not dispatched again. CRC or schema corruption fails startup closed. Detailed state transitions and durability boundaries are in [RECOVERY_SEMANTICS.md](RECOVERY_SEMANTICS.md).
 
@@ -69,16 +77,9 @@ The bounded SOME/IP path also exposes a synthetic `vehicle.body/SetDoorLocks` me
 
 The performance path uses a separate typed `vehicle.telemetry/Upload` method and a fresh runtime per matrix cell. It measures in-process runtime work only; the transport paths remain outside those latency numbers. Methodology and the full boundary are in [PERFORMANCE_MATRIX.md](PERFORMANCE_MATRIX.md).
 
-The replay path materializes versioned JSONL tasks from the frozen four-node corpus. Baseline and replay phases run in separate fresh C++ gateway processes, preserve ordered Trace-linked results and terminal snapshots, and compare canonical per-task SHA-256 digests. It is a local replay core, not yet a storage-backed distributed data platform; see [REPLAY_PIPELINE.md](REPLAY_PIPELINE.md).
+The replay path materializes versioned JSONL tasks from the frozen four-node corpus. Baseline and replay phases run in separate fresh C++ gateway processes, preserve ordered Trace-linked results and terminal snapshots, and compare canonical per-task SHA-256 digests. The same tasks are normalized into explicit Parquet task, frame and expected-state tables, stored as local SHA-256-addressed objects and registered in SQLite metadata. This remains a local prototype rather than S3/PostgreSQL or a distributed data platform; see [REPLAY_PIPELINE.md](REPLAY_PIPELINE.md) and [DATA_STORAGE.md](DATA_STORAGE.md).
 
 The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monotonically increasing fencing tokens and idempotent result commits. Four worker threads each own a separate C++ gateway process. This demonstrates worker coordination on one host, not a PostgreSQL or multi-host control plane; see [REPLAY_SCHEDULER.md](REPLAY_SCHEDULER.md).
-| frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
-| virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
-| DBC subset decoder | Python | Independent contract check for the project-supported message subset |
-| replay task recorder | Python | Versioned task IDs, embedded inputs, source lineage and dataset SHA-256 |
-| replay executor | Python + C++ process | Fresh-process baseline/replay, ordered event capture and terminal digest comparison |
-| replay job store | Python + SQLite WAL | Atomic leases, heartbeat, fencing token and idempotent result commit |
-| replay workers | Python threads + C++ processes | Leased task execution through independent gateway processes |
 
 ## Current signal ownership
 
@@ -99,6 +100,7 @@ The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monot
 - power-loss durability, cross-process concurrent arbitration or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
-- physical-vehicle control by an AI or diagnostic agent.
+- physical-vehicle control by an AI or diagnostic agent;
+- S3/MinIO object storage or PostgreSQL execution based only on the local migration contract.
 
 Those boundaries remain explicit until the corresponding source, environment record and reproducible result exist.
