@@ -29,6 +29,11 @@ target_link_libraries(sdv_gateway_demo PRIVATE sdv_core)
 add_executable(sdv_gateway_cli cpp/src/gateway_cli.cpp)
 target_link_libraries(sdv_gateway_cli PRIVATE sdv_core)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
+  target_link_libraries(sdv_socketcan_gateway PRIVATE sdv_core)
+endif()
+
 enable_testing()
 add_executable(sdv_core_tests cpp/tests/test_vehicle_gateway.cpp)
 target_link_libraries(sdv_core_tests PRIVATE sdv_core)

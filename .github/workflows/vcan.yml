@@ -17,6 +17,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release
       - name: Create virtual CAN interface
         run: |
           set -euo pipefail
@@ -27,6 +29,15 @@ jobs:
           ip -details link show vcan0 > artifacts/vcan-interface.txt
       - name: Run actual SocketCAN loopback
         run: python scripts/verify_vcan.py --interface vcan0 --output artifacts/linux-vcan.json
+      - name: Feed virtual ECUs into the C++ gateway
+        run: |
+          set -euo pipefail
+          ./build/sdv_socketcan_gateway --interface vcan0 --count 2 --output artifacts/cpp-vcan.json &
+          gateway_pid=$!
+          sleep 0.2
+          python scripts/send_vcan_frames.py --interface vcan0
+          wait "$gateway_pid"
+          python scripts/verify_cpp_vcan_report.py --report artifacts/cpp-vcan.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

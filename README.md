@@ -12,8 +12,9 @@
   -> Trace 事件
 
 Linux vcan0
-  -> Python SocketCAN 原生套接字
-  -> 项目 DBC 子集解码
+  -> Python虚拟ECU发送进程
+  -> C++ SocketCAN网关
+  -> 项目DBC语义与车辆状态
   -> 可审计 JSON 证据
 ```
 
