@@ -28,7 +28,8 @@ public:
     bool valid() const noexcept;
     const std::string& error() const noexcept;
     SomeIpTransportResult serve_once(
-        const std::function<SomeIpMessage(const SomeIpMessage&)>& handler);
+        const std::function<SomeIpMessage(const SomeIpMessage&)>& handler,
+        bool send_response = true);
 
 private:
     struct Impl;

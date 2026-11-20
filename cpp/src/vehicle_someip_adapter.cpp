@@ -51,52 +51,105 @@ SomeIpMessage make_snapshot_someip_request(std::uint16_t client_id, std::uint16_
                          std::move(payload)};
 }
 
+SomeIpMessage make_door_lock_someip_request(std::uint16_t client_id, std::uint16_t session_id,
+                                            std::uint8_t door_mask, bool lock) {
+    return SomeIpMessage{kVehicleBodySomeIpService, kSetDoorLocksSomeIpMethod, client_id,
+                         session_id, 1U, SomeIpMessageType::Request, SomeIpReturnCode::Ok,
+                         {door_mask, lock ? 1U : 0U}};
+}
+
 SomeIpMessage handle_vehicle_someip_request(const SomeIpMessage& message,
                                             VehicleServiceRuntime& runtime) {
     if (message.message_type != SomeIpMessageType::Request) {
         return error_response(message, SomeIpReturnCode::MalformedMessage);
     }
-    if (message.service_id != kVehicleStateSomeIpService) {
+    if (message.service_id != kVehicleStateSomeIpService &&
+        message.service_id != kVehicleBodySomeIpService) {
         return error_response(message, SomeIpReturnCode::UnknownService);
     }
-    if (message.method_id != kGetSnapshotSomeIpMethod) {
+    const bool state_request = message.service_id == kVehicleStateSomeIpService;
+    const auto expected_method =
+        state_request ? kGetSnapshotSomeIpMethod : kSetDoorLocksSomeIpMethod;
+    if (message.method_id != expected_method) {
         return error_response(message, SomeIpReturnCode::UnknownMethod);
     }
-    if (message.interface_version != 1U || message.payload.size() != 16U) {
+    const auto expected_payload_size = state_request ? 16U : 2U;
+    if (message.interface_version != 1U || message.payload.size() != expected_payload_size ||
+        (!state_request && message.payload.at(1U) > 1U)) {
         return error_response(message, SomeIpReturnCode::MalformedMessage);
     }
 
-    const auto now_ms = read_i64(message.payload, 0U);
-    const auto max_age_ms = read_i64(message.payload, 8U);
     const auto request_id = "someip-" + std::to_string(message.client_id) + "-" +
                             std::to_string(message.session_id);
     const auto trace_id = "someip-trace-" + std::to_string(message.client_id) + "-" +
                           std::to_string(message.session_id);
-    const ServiceRequest request{request_id,
-                                 trace_id,
-                                 "someip-read-client",
-                                 "vehicle.state",
-                                 "GetSnapshot",
-                                 0,
-                                 {"vehicle.state.read"},
-                                 GetVehicleSnapshotRequest{now_ms, max_age_ms}};
+    const ServiceRequest request = state_request
+        ? ServiceRequest{request_id,
+                         trace_id,
+                         "someip-read-client",
+                         "vehicle.state",
+                         "GetSnapshot",
+                         0,
+                         {"vehicle.state.read"},
+                         GetVehicleSnapshotRequest{read_i64(message.payload, 0U),
+                                                   read_i64(message.payload, 8U)}}
+        : ServiceRequest{request_id,
+                         trace_id,
+                         "someip-body-client",
+                         "vehicle.body",
+                         "SetDoorLocks",
+                         0,
+                         {"body.write"},
+                         SetDoorLocksRequest{message.payload.at(0U),
+                                             message.payload.at(1U) == 1U}};
     const auto response = runtime.invoke(request);
-    const auto* snapshot = std::get_if<VehicleSnapshot>(&response.payload);
-    if (!response.accepted || snapshot == nullptr) {
+    if (!response.accepted) {
         return error_response(message, SomeIpReturnCode::NotOk);
     }
 
     std::vector<std::uint8_t> payload;
-    payload.reserve(5U);
-    append_u16(payload, static_cast<std::uint16_t>(snapshot->speed_kph * 100.0 + 0.5));
-    payload.push_back(static_cast<std::uint8_t>(snapshot->battery_percent));
-    payload.push_back(snapshot->door_open ? 1U : 0U);
-    const bool all_fresh = !snapshot->vehicle_status.stale && !snapshot->tire_pressure.stale &&
-                           !snapshot->body_status.stale && !snapshot->tbox_health.stale;
-    payload.push_back(all_fresh ? 1U : 0U);
+    if (state_request) {
+        const auto* snapshot = std::get_if<VehicleSnapshot>(&response.payload);
+        if (snapshot == nullptr) {
+            return error_response(message, SomeIpReturnCode::NotOk);
+        }
+        payload.reserve(5U);
+        append_u16(payload, static_cast<std::uint16_t>(snapshot->speed_kph * 100.0 + 0.5));
+        payload.push_back(static_cast<std::uint8_t>(snapshot->battery_percent));
+        payload.push_back(snapshot->door_open ? 1U : 0U);
+        const bool all_fresh = !snapshot->vehicle_status.stale &&
+                               !snapshot->tire_pressure.stale &&
+                               !snapshot->body_status.stale && !snapshot->tbox_health.stale;
+        payload.push_back(all_fresh ? 1U : 0U);
+    } else {
+        const auto* result = std::get_if<DoorLockResult>(&response.payload);
+        if (result == nullptr) {
+            return error_response(message, SomeIpReturnCode::NotOk);
+        }
+        payload = {result->requested_mask, result->locked ? 1U : 0U};
+    }
     return SomeIpMessage{message.service_id, message.method_id, message.client_id,
                          message.session_id, 1U, SomeIpMessageType::Response,
                          SomeIpReturnCode::Ok, std::move(payload)};
+}
+
+bool decode_door_lock_someip_response(const SomeIpMessage& message, DoorLockWireView& output,
+                                      std::string& error) {
+    if (message.message_type != SomeIpMessageType::Response ||
+        message.return_code != SomeIpReturnCode::Ok) {
+        error = "SOME/IP door-lock response reports an error";
+        return false;
+    }
+    if (message.service_id != kVehicleBodySomeIpService ||
+        message.method_id != kSetDoorLocksSomeIpMethod || message.payload.size() != 2U ||
+        message.payload.at(1U) > 1U) {
+        error = "SOME/IP door-lock response contract mismatch";
+        return false;
+    }
+    output.requested_mask = message.payload.at(0U);
+    output.locked = message.payload.at(1U) == 1U;
+    error.clear();
+    return true;
 }
 
 bool decode_snapshot_someip_response(const SomeIpMessage& message, VehicleSnapshotWireView& output,

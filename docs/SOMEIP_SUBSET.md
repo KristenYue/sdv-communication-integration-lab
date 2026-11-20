@@ -18,6 +18,8 @@ Primary specification reference: [AUTOSAR Foundation R23-11 SOME/IP Protocol Spe
 
 Service `0x1234`, method `0x0001` maps to `vehicle.state/GetSnapshot`. Its request payload is two signed 64-bit values (`now_ms`, `max_age_ms`). Its response payload is a project-specific five-byte schema: speed in 0.01 km/h, battery percentage, door-open flag and an all-signal-groups-fresh flag.
 
+Service `0x1235`, method `0x0001` maps to `vehicle.body/SetDoorLocks`. Its request and response payloads contain a door mask and lock Boolean. This state-changing method is protected by the runtime's idempotency journal; it exists only in the virtual vehicle environment and does not control a physical actuator.
+
 ## Explicitly not implemented
 
 - SOME/IP Service Discovery;

@@ -139,7 +139,7 @@ const std::string& SomeIpUdpServer::error() const noexcept {
 }
 
 SomeIpTransportResult SomeIpUdpServer::serve_once(
-    const std::function<SomeIpMessage(const SomeIpMessage&)>& handler) {
+    const std::function<SomeIpMessage(const SomeIpMessage&)>& handler, bool send_response) {
     if (!valid() || !handler) {
         return transport_error("SERVER_NOT_READY", error());
     }
@@ -163,7 +163,13 @@ SomeIpTransportResult SomeIpUdpServer::serve_once(
     if (!decoded.accepted) {
         return transport_error(decoded.code, decoded.message);
     }
-    const auto response = encode_someip(handler(decoded.value));
+    const auto handled = handler(decoded.value);
+    if (!send_response) {
+        return SomeIpTransportResult{true, "RESPONSE_DROPPED",
+                                     "request handled and response intentionally dropped",
+                                     decoded.value};
+    }
+    const auto response = encode_someip(handled);
 #ifdef _WIN32
     const auto sent = sendto(impl_->socket, reinterpret_cast<const char*>(response.data()),
                              static_cast<int>(response.size()), 0,

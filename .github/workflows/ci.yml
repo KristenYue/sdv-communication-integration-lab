@@ -48,6 +48,12 @@ jobs:
       - name: Run runtime concurrency evidence on Windows
         if: runner.os == 'Windows'
         run: python scripts/run_concurrency_evidence.py --executable build/Release/sdv_concurrency_evidence.exe --output artifacts/runtime-concurrency.json
+      - name: Run network recovery evidence on Linux
+        if: runner.os == 'Linux'
+        run: python scripts/run_network_recovery_evidence.py --server build/sdv_someip_vehicle_server --client build/sdv_someip_body_client --output artifacts/network-recovery.json
+      - name: Run network recovery evidence on Windows
+        if: runner.os == 'Windows'
+        run: python scripts/run_network_recovery_evidence.py --server build/Release/sdv_someip_vehicle_server.exe --client build/Release/sdv_someip_body_client.exe --output artifacts/network-recovery.json
       - name: Run frozen cross-process scenarios on Linux
         if: runner.os == 'Linux'
         run: python scripts/run_frozen_scenarios.py --gateway-bin build/sdv_gateway_cli --output artifacts/scenario-report.json

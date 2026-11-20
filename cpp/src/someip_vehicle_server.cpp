@@ -40,6 +40,9 @@ bool seed_gateway(sdv::VehicleGateway& gateway) {
 
 int main(int argc, char** argv) {
     const auto port = static_cast<std::uint16_t>(argc > 1 ? std::stoi(argv[1]) : 30'490);
+    const std::string mode = argc > 2 ? argv[2] : "snapshot";
+    const std::string journal = argc > 3 ? argv[3] : "";
+    const int request_count = argc > 4 ? std::stoi(argv[4]) : 1;
     sdv::VehicleGateway gateway;
     if (!seed_gateway(gateway)) {
         std::cerr << "failed to seed vehicle gateway\n";
@@ -50,24 +53,48 @@ int main(int argc, char** argv) {
                    std::chrono::steady_clock::now().time_since_epoch())
             .count();
     };
-    sdv::VehicleServiceRuntime runtime(clock);
+    sdv::VehicleServiceRuntime runtime(clock, journal);
     if (!sdv::register_vehicle_state_service(runtime, gateway)) {
         std::cerr << "failed to register vehicle state service\n";
         return EXIT_FAILURE;
+    }
+    int body_handler_executions = 0;
+    if (mode == "body-drop" || mode == "body-replay") {
+        const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
+                                          {{"SetDoorLocks", "body.write", true}}};
+        if (!runtime.register_service(
+                body, [&body_handler_executions](const sdv::ServiceRequest& request) {
+                    ++body_handler_executions;
+                    const auto& command =
+                        std::get<sdv::SetDoorLocksRequest>(request.payload);
+                    return sdv::ServiceResponse{
+                        true, "OK", "door lock command applied",
+                        sdv::DoorLockResult{command.door_mask, command.lock}};
+                })) {
+            std::cerr << "failed to register vehicle body service\n";
+            return EXIT_FAILURE;
+        }
     }
     sdv::SomeIpUdpServer server(port, 5'000);
     if (!server.valid()) {
         std::cerr << server.error() << '\n';
         return EXIT_FAILURE;
     }
-    std::cout << "READY port=" << port << std::endl;
-    const auto result = server.serve_once([&runtime](const sdv::SomeIpMessage& request) {
-        return sdv::handle_vehicle_someip_request(request, runtime);
-    });
-    if (!result.accepted) {
-        std::cerr << result.code << ": " << result.message << '\n';
-        return EXIT_FAILURE;
+    std::cout << "READY port=" << port << " mode=" << mode << " requests=" << request_count
+              << std::endl;
+    for (int index = 0; index < request_count; ++index) {
+        const auto result = server.serve_once(
+            [&runtime](const sdv::SomeIpMessage& request) {
+                return sdv::handle_vehicle_someip_request(request, runtime);
+            },
+            mode != "body-drop");
+        if (!result.accepted) {
+            std::cerr << result.code << ": " << result.message << '\n';
+            return EXIT_FAILURE;
+        }
     }
-    std::cout << "SERVED runtime_trace_events=" << runtime.trace_snapshot().size() << '\n';
+    std::cout << "SERVED requests=" << request_count
+              << " body_handler_executions=" << body_handler_executions
+              << " runtime_trace_events=" << runtime.trace_snapshot().size() << '\n';
     return EXIT_SUCCESS;
 }

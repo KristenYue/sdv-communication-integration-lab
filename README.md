@@ -72,6 +72,14 @@ Windows本地实测：32个线程同时提交同一状态变更，32个调用全
 
 当前属于单进程多线程准入控制，Handler仍运行在调用方线程；不声称具备内部线程池、优先级调度、公平性、实时性或跨进程并发仲裁。
 
+### 网络结果未知与重启重试
+
+SOME/IP有界链路新增`vehicle.body/SetDoorLocks`状态变更方法。故障实验让第一服务进程正常执行指令并持久化终态，但在UDP层故意丢弃响应；客户端只能观察到超时。随后服务端携带同一Journal重启，客户端使用相同Client ID、Session ID和Payload重试，运行时重放原始响应而不再次进入Handler。
+
+Windows localhost实测30个独立指令：第一服务进程Handler执行30次、故意丢弃30个响应、客户端超时30次；重启后30次重试全部成功、30个请求身份全部关联、第二进程Handler执行0次、重复最终动作0次。原始报告见`benchmarks/windows-network-recovery-v1.json`。
+
+该结果验证的是合成车辆服务上的“响应丢失—客户端超时—服务重启—同ID重试”组合语义，不代表物理车载以太网、真实门锁执行器、断电恢复或量产SOME/IP栈。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。

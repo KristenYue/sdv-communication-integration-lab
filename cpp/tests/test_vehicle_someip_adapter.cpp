@@ -67,11 +67,40 @@ void test_adapter_errors() {
           "invalid wire payload rejected");
 }
 
+void test_body_command_adapter() {
+    std::int64_t clock_ms = 1'000;
+    int executions = 0;
+    sdv::VehicleServiceRuntime runtime([&clock_ms] { return clock_ms; });
+    const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
+                                      {{"SetDoorLocks", "body.write", true}}};
+    check(runtime.register_service(
+              body, [&executions](const sdv::ServiceRequest& request) {
+                  ++executions;
+                  const auto& command = std::get<sdv::SetDoorLocksRequest>(request.payload);
+                  return sdv::ServiceResponse{
+                      true, "OK", "door lock command applied",
+                      sdv::DoorLockResult{command.door_mask, command.lock}};
+              }),
+          "body wire service registered");
+    const auto request = sdv::make_door_lock_someip_request(82U, 9U, 0x0FU, true);
+    const auto response = sdv::handle_vehicle_someip_request(request, runtime);
+    sdv::DoorLockWireView result;
+    std::string error;
+    check(sdv::decode_door_lock_someip_response(response, result, error),
+          "body command response decoded");
+    check(result.requested_mask == 0x0FU && result.locked,
+          "body command payload preserved");
+    const auto replay = sdv::handle_vehicle_someip_request(request, runtime);
+    check(sdv::decode_door_lock_someip_response(replay, result, error) && executions == 1,
+          "wire retry is idempotent inside runtime");
+}
+
 }  // namespace
 
 int main() {
     test_runtime_adapter_round_trip();
     test_adapter_errors();
+    test_body_command_adapter();
     if (failures == 0) {
         std::cout << "All vehicle SOME/IP adapter tests passed\n";
         return EXIT_SUCCESS;

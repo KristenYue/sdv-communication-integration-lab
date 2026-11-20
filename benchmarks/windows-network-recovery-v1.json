@@ -1,0 +1,19 @@
+{
+  "schema_version": "sdv-network-recovery-v1",
+  "data_boundary": "localhost_udp_bounded_someip_response_drop_and_process_restart",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "requests": 30,
+  "first_server": {
+    "ready": "READY port=30494 mode=body-drop requests=30",
+    "responses_intentionally_dropped": 30,
+    "client_timeouts": 30,
+    "handler_executions": 30
+  },
+  "restarted_server": {
+    "ready": "READY port=30494 mode=body-replay requests=30",
+    "cached_responses_replayed": 30,
+    "request_identities_correlated": 30,
+    "handler_executions": 0
+  },
+  "duplicate_final_actions": 0
+}
