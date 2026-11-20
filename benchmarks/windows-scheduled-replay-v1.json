@@ -1,0 +1,37 @@
+{
+  "schema_version": "sdv-scheduled-replay-v1",
+  "data_boundary": "local_sqlite_metadata_four_workers_and_synthetic_vehicle_tasks",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "batch": {
+    "task_count": 300,
+    "worker_count": 4,
+    "gateway_processes": 4,
+    "completed": 300,
+    "expected_matches": 300,
+    "commit_statuses": {
+      "COMMITTED": 300
+    },
+    "worker_commits": {
+      "replay-worker-0": 68,
+      "replay-worker-1": 78,
+      "replay-worker-2": 85,
+      "replay-worker-3": 69
+    },
+    "aggregate_output_sha256": "385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1",
+    "elapsed_seconds": 6.1308726999996,
+    "final_job_counts": {
+      "pending": 0,
+      "leased": 0,
+      "completed": 300
+    }
+  },
+  "lease_controls": {
+    "experiments": 60,
+    "heartbeats_accepted": 60,
+    "premature_takeovers_blocked": 60,
+    "takeover_commits": 60,
+    "stale_commits_fenced": 60,
+    "idempotent_commit_replays": 60,
+    "result_conflicts_rejected": 60
+  }
+}

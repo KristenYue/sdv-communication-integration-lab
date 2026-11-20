@@ -70,11 +70,15 @@ The bounded SOME/IP path also exposes a synthetic `vehicle.body/SetDoorLocks` me
 The performance path uses a separate typed `vehicle.telemetry/Upload` method and a fresh runtime per matrix cell. It measures in-process runtime work only; the transport paths remain outside those latency numbers. Methodology and the full boundary are in [PERFORMANCE_MATRIX.md](PERFORMANCE_MATRIX.md).
 
 The replay path materializes versioned JSONL tasks from the frozen four-node corpus. Baseline and replay phases run in separate fresh C++ gateway processes, preserve ordered Trace-linked results and terminal snapshots, and compare canonical per-task SHA-256 digests. It is a local replay core, not yet a storage-backed distributed data platform; see [REPLAY_PIPELINE.md](REPLAY_PIPELINE.md).
+
+The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monotonically increasing fencing tokens and idempotent result commits. Four worker threads each own a separate C++ gateway process. This demonstrates worker coordination on one host, not a PostgreSQL or multi-host control plane; see [REPLAY_SCHEDULER.md](REPLAY_SCHEDULER.md).
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
 | replay task recorder | Python | Versioned task IDs, embedded inputs, source lineage and dataset SHA-256 |
 | replay executor | Python + C++ process | Fresh-process baseline/replay, ordered event capture and terminal digest comparison |
+| replay job store | Python + SQLite WAL | Atomic leases, heartbeat, fencing token and idempotent result commit |
+| replay workers | Python threads + C++ processes | Leased task execution through independent gateway processes |
 
 ## Current signal ownership
 

@@ -96,6 +96,14 @@ Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成
 
 当前是JSONL任务集与JSON报告，还没有MCAP/Parquet、对象存储、PostgreSQL元数据或分布式Worker；不能描述成量产自动驾驶数据闭环平台。
 
+### 租约Worker、心跳与Fencing
+
+本地调度原型使用SQLite WAL保存任务状态、Lease Owner、过期时间、Attempt、单调递增Fencing Token和结果摘要。4个Python Worker分别持有独立C++网关进程，通过原子事务领取任务，执行前后续租，并以Token提交结果；过期Worker的迟到提交不能覆盖新Owner。
+
+Windows实测300个任务全部完成、300次预期契约全部通过，最终状态为300 completed、0 leased、0 pending；4个Worker分别提交68/78/85/69个任务，聚合输出SHA-256与单Worker基线保持一致。另有60组租约控制实验：60次心跳成功、60次提前接管被阻止、60次过期接管提交成功、60次旧Token提交被Fence、60次同结果提交幂等重放、60次不同结果冲突拒绝。原始报告见`benchmarks/windows-scheduled-replay-v1.json`，协议见[回放调度说明](docs/REPLAY_SCHEDULER.md)。
+
+SQLite和单机线程协调器只是可复现元数据原型，不代表PostgreSQL高可用、多主调度、跨主机时钟或网络分区能力。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。
