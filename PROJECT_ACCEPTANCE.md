@@ -21,10 +21,11 @@
 
 ### P0：通信垂直切片
 
-- C++车辆网关完成帧校验、解码、新鲜度与Trace；
-- DBC子集解析器拒绝不支持的格式；
-- Linux `vcan0`真实收发；
-- 确定性故障注入器覆盖drop/duplicate/corrupt DLC/delay/stale timestamp。
+- [x] C++车辆网关完成帧校验、解码、新鲜度与Trace；
+- [x] DBC子集解析器拒绝不支持的格式；
+- [ ] Linux `vcan0`真实收发（脚本与CI已建立，等待远端CI执行证据）；
+- [x] 确定性故障注入器覆盖drop/duplicate/corrupt DLC/delay/stale timestamp；
+- [x] 220个网关契约场景通过独立C++进程执行。注意：它们是帧契约冻结集，不能替代P1要求的200个多节点系统场景。
 
 ### P1：跨进程系统集成
 

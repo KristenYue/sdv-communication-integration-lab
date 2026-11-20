@@ -26,6 +26,9 @@ target_include_directories(sdv_core PUBLIC cpp/include)
 add_executable(sdv_gateway_demo cpp/src/main.cpp)
 target_link_libraries(sdv_gateway_demo PRIVATE sdv_core)
 
+add_executable(sdv_gateway_cli cpp/src/gateway_cli.cpp)
+target_link_libraries(sdv_gateway_cli PRIVATE sdv_core)
+
 enable_testing()
 add_executable(sdv_core_tests cpp/tests/test_vehicle_gateway.cpp)
 target_link_libraries(sdv_core_tests PRIVATE sdv_core)

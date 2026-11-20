@@ -19,7 +19,8 @@ $command = @(
     ('cl {0} cpp\tests\test_vehicle_gateway.cpp /Fe"{1}\sdv_core_tests.exe"' -f $common, $runtimeDirectory),
     ('"{0}\sdv_core_tests.exe"' -f $runtimeDirectory),
     ('cl {0} cpp\src\main.cpp /Fe"{1}\sdv_gateway_demo.exe"' -f $common, $runtimeDirectory),
-    ('"{0}\sdv_gateway_demo.exe"' -f $runtimeDirectory)
+    ('"{0}\sdv_gateway_demo.exe"' -f $runtimeDirectory),
+    ('cl {0} cpp\src\gateway_cli.cpp /Fe"{1}\sdv_gateway_cli.exe"' -f $common, $runtimeDirectory)
 ) -join ' && '
 
 Push-Location $repositoryRoot

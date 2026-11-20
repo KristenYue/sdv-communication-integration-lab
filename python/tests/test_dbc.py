@@ -1,9 +1,7 @@
 from pathlib import Path
 
 import pytest
-
 from sdv_lab import ProjectDBC
-
 
 ROOT = Path(__file__).resolve().parents[2]
 

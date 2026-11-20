@@ -32,7 +32,7 @@ def main() -> None:
         sender.send(struct.pack(frame_format, 257, 8, payload))
         frame_id, dlc, data = struct.unpack(frame_format, receiver.recv(16))
 
-    if (frame_id != 257 or dlc != 8 or data != payload:
+    if frame_id != 257 or dlc != 8 or data != payload:
         raise RuntimeError("SocketCAN loopback did not preserve the frame")
     dbc = ProjectDBC(Path(__file__).resolve().parents[1] / "examples" / "vehicle.dbc")
     decoded = dbc.decode(frame_id, data[:dlc])

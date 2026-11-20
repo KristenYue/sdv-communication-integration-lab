@@ -22,6 +22,7 @@ Linux vcan0
 - C++20 实现确定性的虚拟车辆网关和故障注入器；
 - Python 实现项目约束内的 DBC 解码与 Linux SocketCAN 验收；
 - CI 同时验证 Windows/Linux 构建，并在 Linux 创建真实 `vcan0` 接口；
+- Python场景控制面通过进程管道驱动独立C++网关，冻结集与结果均保存SHA-256；
 - 所有性能、可靠性和恢复结论必须在冻结场景执行后才能写入简历。
 
 ## 快速运行
@@ -40,7 +41,19 @@ python -m pytest
 
 ```powershell
 .\scripts\build_windows.ps1
+$env:PYTHONPATH = "python"
+python scripts\run_frozen_scenarios.py `
+  --gateway-bin .runtime\windows-build\sdv_gateway_cli.exe `
+  --output artifacts\windows-scenario-report.json
 ```
+
+## 冻结场景v1
+
+`data/scenarios/v1.jsonl`固定包含220个场景、300次帧提交，覆盖正常状态、正常胎压、错误DLC、未知ID、重复帧、陈旧帧、同时间戳冲突和越界信号。它验证的是“Python控制面 -> 本地进程管道 -> C++网关”的系统契约；报告中的延迟明确不是CAN总线时延。
+
+Windows 11 / MSVC本地实测：220/220场景通过、300次帧提交、失败0次；进程管道加C++校验的p50/p95/p99分别为0.0354/0.0760/0.0959 ms。该数字不代表CAN、ECU或真实车辆网络时延。原始结果见 `benchmarks/windows-scenario-v1.json`。
+
+首次端到端运行发现并修复了`QUIT`确认与子进程退出之间的清理竞争，见 [工程日志](docs/ENGINEERING_LOG.md)。
 
 Linux SocketCAN 验收：
 

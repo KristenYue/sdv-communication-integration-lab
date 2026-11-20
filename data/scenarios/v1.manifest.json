@@ -1,0 +1,17 @@
+{
+  "schema_version": "sdv-frozen-scenarios-v1",
+  "scenario_count": 220,
+  "frame_count": 300,
+  "categories": {
+    "duplicate_frame": 30,
+    "happy_tire_pressure": 40,
+    "happy_vehicle_status": 40,
+    "invalid_dlc": 25,
+    "signal_out_of_range": 15,
+    "stale_frame": 30,
+    "timestamp_conflict": 20,
+    "unknown_identifier": 20
+  },
+  "sha256": "e341b405adb001149c97446fe4f4cefb2ba8c2fd346bec1b8e6d05e15f9e5f55",
+  "data_boundary": "deterministic_synthetic_vehicle_frames"
+}

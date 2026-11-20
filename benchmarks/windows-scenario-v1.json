@@ -1,0 +1,30 @@
+{
+  "schema_version": "sdv-scenario-report-v1",
+  "data_boundary": "deterministic_synthetic_frames_over_local_process_pipe",
+  "gateway_executable": "sdv_gateway_cli.exe",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.14",
+  "dataset_sha256": "e341b405adb001149c97446fe4f4cefb2ba8c2fd346bec1b8e6d05e15f9e5f55",
+  "scenario_count": 220,
+  "frame_count": 300,
+  "passed": 220,
+  "failed": 0,
+  "elapsed_seconds": 0.027634400001261383,
+  "control_path_latency_ms": {
+    "p50": 0.03535,
+    "p95": 0.076035,
+    "p99": 0.095901,
+    "max": 0.1516,
+    "scope": "Python pipe round-trip plus C++ validation; not CAN bus latency"
+  },
+  "observed_codes": {
+    "APPLIED": 160,
+    "DUPLICATE_FRAME": 30,
+    "INVALID_DLC": 25,
+    "SIGNAL_OUT_OF_RANGE": 15,
+    "STALE_FRAME": 30,
+    "TIMESTAMP_CONFLICT": 20,
+    "UNKNOWN_CAN_ID": 20
+  },
+  "failures": []
+}
