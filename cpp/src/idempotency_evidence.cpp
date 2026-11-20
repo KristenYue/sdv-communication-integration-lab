@@ -10,7 +10,7 @@ int main() {
     int handler_executions = 0;
     sdv::VehicleServiceRuntime runtime([&now] { return now; });
     const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
-                                      {{"SetDoorLocks", "body.write"}}};
+                                      {{"SetDoorLocks", "body.write", true}}};
     if (!runtime.register_service(
             body, [&handler_executions](const sdv::ServiceRequest& request) {
                 ++handler_executions;

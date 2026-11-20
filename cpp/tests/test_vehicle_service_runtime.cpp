@@ -92,7 +92,8 @@ void test_admission_guards() {
 void test_post_dispatch_result_uncertainty() {
     std::int64_t now = 1'000;
     sdv::VehicleServiceRuntime runtime([&now] { return now; });
-    const sdv::ServiceDescriptor slow{"vehicle.body", "1.0.0", {{"SetDoorLocks", "body.write"}}};
+    const sdv::ServiceDescriptor slow{"vehicle.body", "1.0.0",
+                                      {{"SetDoorLocks", "body.write", true}}};
     check(runtime.register_service(
               slow, [&now](const sdv::ServiceRequest& request) {
                   now = 1'101;
@@ -130,7 +131,7 @@ void test_idempotent_replay_and_conflict() {
     int executions = 0;
     sdv::VehicleServiceRuntime runtime([&now] { return now; });
     const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
-                                      {{"SetDoorLocks", "body.write"}}};
+                                      {{"SetDoorLocks", "body.write", true}}};
     check(runtime.register_service(
               body, [&executions](const sdv::ServiceRequest& request) {
                   ++executions;

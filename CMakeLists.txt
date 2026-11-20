@@ -19,6 +19,7 @@ endif()
 
 add_library(sdv_core
   cpp/src/fault_injector.cpp
+  cpp/src/idempotency_journal.cpp
   cpp/src/someip.cpp
   cpp/src/someip_udp.cpp
   cpp/src/vehicle_gateway.cpp
@@ -47,6 +48,9 @@ target_link_libraries(sdv_someip_vehicle_client PRIVATE sdv_core)
 
 add_executable(sdv_idempotency_evidence cpp/src/idempotency_evidence.cpp)
 target_link_libraries(sdv_idempotency_evidence PRIVATE sdv_core)
+
+add_executable(sdv_restart_recovery_evidence cpp/src/restart_recovery_evidence.cpp)
+target_link_libraries(sdv_restart_recovery_evidence PRIVATE sdv_core)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)

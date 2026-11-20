@@ -1,5 +1,6 @@
 #include "sdv/vehicle_service_runtime.hpp"
 
+#include "sdv/idempotency_journal.hpp"
 #include "sdv/vehicle_gateway.hpp"
 
 #include <algorithm>
@@ -10,11 +11,27 @@
 
 namespace sdv {
 
-VehicleServiceRuntime::VehicleServiceRuntime(Clock clock) : clock_(std::move(clock)) {
+VehicleServiceRuntime::VehicleServiceRuntime(Clock clock, std::string journal_path)
+    : clock_(std::move(clock)) {
     if (!clock_) {
         throw std::invalid_argument("vehicle service runtime requires a clock");
     }
+    if (!journal_path.empty()) {
+        journal_ = std::make_unique<IdempotencyJournal>(std::move(journal_path));
+        std::vector<RecoveredJournalRequest> recovered;
+        std::string error;
+        if (!journal_->recover(recovered, error)) {
+            throw std::runtime_error("idempotency journal recovery failed: " + error);
+        }
+        for (auto& entry : recovered) {
+            completed_requests_.emplace(
+                std::move(entry.request_id),
+                CompletedRequest{std::move(entry.fingerprint), std::move(entry.response)});
+        }
+    }
 }
+
+VehicleServiceRuntime::~VehicleServiceRuntime() = default;
 
 bool VehicleServiceRuntime::register_service(ServiceDescriptor descriptor, Handler handler) {
     if (descriptor.name.empty() || descriptor.version.empty() || descriptor.methods.empty() ||
@@ -72,7 +89,14 @@ std::string VehicleServiceRuntime::fingerprint(const ServiceRequest& request) {
 
 ServiceResponse VehicleServiceRuntime::complete(const ServiceRequest& request,
                                                 const std::string& request_fingerprint,
-                                                ServiceResponse response) {
+                                                ServiceResponse response, bool persist) {
+    if (persist && journal_ != nullptr) {
+        std::string error;
+        if (!journal_->append_complete(request.request_id, request_fingerprint, response, error)) {
+            response = reject(request, "COMPLETION_UNKNOWN",
+                              "terminal journal write failed after dispatch: " + error);
+        }
+    }
     completed_requests_.emplace(
         request.request_id,
         CompletedRequest{request_fingerprint, response});
@@ -121,6 +145,16 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
         return reject(request, "DEADLINE_EXCEEDED", "deadline expired before dispatch");
     }
 
+    const bool persist = method->state_changing && journal_ != nullptr;
+    if (persist) {
+        std::string error;
+        if (!journal_->append_begin(request.request_id, request_fingerprint, error)) {
+            return reject(request, "JOURNAL_ERROR",
+                          "request was not dispatched because BEGIN could not be persisted: " +
+                              error);
+        }
+    }
+
     record(request, "DISPATCHED", "request passed runtime admission checks");
     ServiceResponse response;
     try {
@@ -128,25 +162,25 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     } catch (const std::exception& error) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           std::string("handler failed after dispatch: ") + error.what());
-        return complete(request, request_fingerprint, std::move(response));
+        return complete(request, request_fingerprint, std::move(response), persist);
     } catch (...) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           "handler failed after dispatch with a non-standard exception");
-        return complete(request, request_fingerprint, std::move(response));
+        return complete(request, request_fingerprint, std::move(response), persist);
     }
 
     if (cancelled_requests_.contains(request.request_id)) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           "request was cancelled after dispatch; side effects may have occurred");
-        return complete(request, request_fingerprint, std::move(response));
+        return complete(request, request_fingerprint, std::move(response), persist);
     }
     if (request.deadline_ms > 0 && clock_() > request.deadline_ms) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           "deadline expired after dispatch; side effects may have occurred");
-        return complete(request, request_fingerprint, std::move(response));
+        return complete(request, request_fingerprint, std::move(response), persist);
     }
     record(request, response.code, response.message);
-    return complete(request, request_fingerprint, std::move(response));
+    return complete(request, request_fingerprint, std::move(response), persist);
 }
 
 bool VehicleServiceRuntime::cancel(const std::string& request_id) {

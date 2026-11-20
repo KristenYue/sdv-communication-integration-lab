@@ -59,7 +59,9 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 
 Completed runtime requests are indexed by Request ID and an exact semantic fingerprint over Principal, Service, Method and typed Payload. Service existence, method existence and the caller's current permission are checked before cache lookup, so replay cannot bypass authorization. An identical retry returns the cached typed response; a different fingerprint returns `REQUEST_ID_CONFLICT`. Retry-local Trace ID, permissions and Deadline do not change the operation identity. Post-dispatch uncertain outcomes are cached because repeating an operation whose side effects are unknown is unsafe.
 
-The current store is in-memory and invocation is sequential. It is intentionally not described as durable or concurrent idempotency until a journal and in-flight coordination protocol are implemented and exercised across process restarts.
+The default store is in-memory and invocation is sequential. It is not described as concurrent idempotency because an in-flight coordination protocol has not yet been implemented.
+
+State-changing methods may additionally use the append-only recovery journal. A flushed `BEGIN` precedes Handler dispatch and a `COMPLETE` follows it. Cleanly completed requests recover their typed response; an unmatched `BEGIN` recovers as `COMPLETION_UNKNOWN` and is not dispatched again. CRC or schema corruption fails startup closed. Detailed state transitions and durability boundaries are in [RECOVERY_SEMANTICS.md](RECOVERY_SEMANTICS.md).
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
@@ -80,7 +82,7 @@ The current store is in-memory and invocation is sequential. It is intentionally
 - AUTOSAR compliance;
 - production SOME/IP or DDS interoperability;
 - cross-process service discovery or transport for the vehicle-service runtime;
-- durable idempotency, persistent request recovery or real-time scheduling;
+- power-loss durability, concurrent in-flight deduplication or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
 - physical-vehicle control by an AI or diagnostic agent.

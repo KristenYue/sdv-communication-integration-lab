@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <variant>
@@ -13,6 +14,7 @@
 namespace sdv {
 
 class VehicleGateway;
+class IdempotencyJournal;
 
 struct GetVehicleSnapshotRequest {
     std::int64_t now_ms{0};
@@ -36,6 +38,7 @@ using ServiceResponsePayload = std::variant<std::monostate, VehicleSnapshot, Doo
 struct ServiceMethodDescriptor {
     std::string name;
     std::string required_permission;
+    bool state_changing{false};
 };
 
 struct ServiceDescriptor {
@@ -78,7 +81,8 @@ public:
     using Clock = std::function<std::int64_t()>;
     using Handler = std::function<ServiceResponse(const ServiceRequest&)>;
 
-    explicit VehicleServiceRuntime(Clock clock);
+    explicit VehicleServiceRuntime(Clock clock, std::string journal_path = {});
+    ~VehicleServiceRuntime();
 
     bool register_service(ServiceDescriptor descriptor, Handler handler);
     std::vector<ServiceDescriptor> discover() const;
@@ -101,6 +105,7 @@ private:
     Clock clock_;
     std::map<std::string, RegisteredService> services_;
     std::map<std::string, CompletedRequest> completed_requests_;
+    std::unique_ptr<IdempotencyJournal> journal_;
     std::set<std::string> cancelled_requests_;
     std::vector<ServiceRuntimeEvent> trace_;
     std::uint64_t next_sequence_{1};
@@ -110,7 +115,7 @@ private:
                            std::string message);
     static std::string fingerprint(const ServiceRequest& request);
     ServiceResponse complete(const ServiceRequest& request, const std::string& fingerprint,
-                             ServiceResponse response);
+                             ServiceResponse response, bool persist);
 };
 
 bool register_vehicle_state_service(VehicleServiceRuntime& runtime,

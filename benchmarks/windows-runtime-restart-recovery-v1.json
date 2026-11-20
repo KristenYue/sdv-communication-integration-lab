@@ -1,0 +1,23 @@
+{
+  "schema_version": "sdv-runtime-restart-recovery-v1",
+  "data_boundary": "append_only_process_restart_journal_not_power_loss_durability",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "clean_restart": {
+    "commands": 60,
+    "first_process_handler_executions": 60,
+    "second_process_handler_executions": 0,
+    "cached_responses_replayed": 60,
+    "conflicts_rejected_after_restart": 60,
+    "duplicate_final_actions": 0
+  },
+  "crash_window": {
+    "simulated_exit_code": 73,
+    "recovered_code": "COMPLETION_UNKNOWN",
+    "post_restart_handler_executions": 0,
+    "blind_reexecution_prevented": true
+  },
+  "corruption": {
+    "checksum_or_schema_failure_rejected_startup": true,
+    "exit_code": 74
+  }
+}

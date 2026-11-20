@@ -54,7 +54,15 @@ Linux vcan0
 
 Windows本地证据包含60组状态变更指令、共180次调用：60次首次执行、60次相同内容重试和60次冲突内容复用；Handler实际执行60次、幂等重放60次、冲突拒绝60次、重复最终动作0次。原始结果见`benchmarks/windows-runtime-idempotency-v1.json`。
 
-当前缓存仅存在于单进程内存中，实验也是顺序调用；它不证明并发重复请求协调、进程重启后的幂等恢复或有界缓存淘汰安全。持久化Journal与并发In-flight协调属于下一阶段。
+运行时默认使用单进程内存缓存；状态变更方法可启用下面的持久化Journal。当前调用仍为顺序执行，不证明并发重复请求协调或调度背压。
+
+### 进程重启恢复Journal
+
+对标记为`state_changing`的方法，运行时在调用Handler前追加并刷新`BEGIN(request_id, fingerprint)`，在Handler返回后追加并刷新带类型化响应的`COMPLETE`。重启恢复时：完整记录重放原始响应；只有`BEGIN`的请求恢复为`COMPLETION_UNKNOWN`并禁止盲目重执行；CRC-32或记录Schema损坏则拒绝启动。
+
+Windows本地执行60个状态变更请求后重启服务进程：第二进程重放60个响应、Handler执行0次、重复最终动作0次，并拒绝60个冲突内容。另一次实验在Handler内部以退出码73直接终止进程，重启后得到`COMPLETION_UNKNOWN`且Handler执行0次。人工追加损坏记录后，进程以退出码74失败关闭。结果见`benchmarks/windows-runtime-restart-recovery-v1.json`，状态机说明见[恢复语义](docs/RECOVERY_SEMANTICS.md)。
+
+该证据针对进程退出/重启，不代表突然断电下的存储屏障、跨多进程写入、分布式Exactly Once或真实执行器事务。
 
 ## SOME/IP有界跨进程链路
 
