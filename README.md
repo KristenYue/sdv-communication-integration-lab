@@ -88,6 +88,14 @@ Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成
 
 这些数字仅覆盖进程内C++运行时的请求构造、语义指纹、准入、Handler调用、终态缓存和Trace，不代表CAN、SocketCAN、UDP、SOME/IP、ECU或真实车辆网络时延，也不构成硬实时保证。
 
+## 版本化记录与确定性回放
+
+`data/replay/tasks_v1.jsonl`冻结300个唯一任务ID，来源为200个独立四节点系统场景：第一代包含全部200个场景，第二代将前100个场景作为独立任务再次记录。每个任务内嵌完整输入、源场景ID、源数据集SHA-256和代次；因此项目明确表述为“300个任务、200个独立源场景”，不包装成300个不同车辆场景。
+
+基线阶段和回放阶段分别启动全新的C++网关进程，记录有序返回码、接受状态、CAN ID、Trace ID和完整终态快照，并生成每任务SHA-256。Windows实测两阶段共提交2600帧，600/600次预期契约校验通过，300/300任务摘要一致、差异0项，基线与回放聚合SHA-256均为`385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1`。原始报告见`benchmarks/windows-replay-v1.json`，方法见[回放管线说明](docs/REPLAY_PIPELINE.md)。
+
+当前是JSONL任务集与JSON报告，还没有MCAP/Parquet、对象存储、PostgreSQL元数据或分布式Worker；不能描述成量产自动驾驶数据闭环平台。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。

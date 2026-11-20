@@ -1,0 +1,22 @@
+{
+  "schema_version": "sdv-replay-report-v1",
+  "data_boundary": "versioned_synthetic_vehicle_tasks_over_two_fresh_cpp_processes",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "gateway_executable": "sdv_gateway_cli.exe",
+  "task_dataset_sha256": "c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980",
+  "task_count": 300,
+  "unique_source_scenarios": 200,
+  "baseline_processes": 1,
+  "replay_processes": 1,
+  "frame_submissions_per_phase": 1300,
+  "total_frame_submissions": 2600,
+  "expected_matches": 600,
+  "expected_match_total": 600,
+  "deterministic_matches": 300,
+  "deterministic_mismatches": 0,
+  "baseline_output_sha256": "385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1",
+  "replay_output_sha256": "385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1",
+  "baseline_elapsed_seconds": 0.09648469999956433,
+  "replay_elapsed_seconds": 0.08522870000160765,
+  "divergences": []
+}

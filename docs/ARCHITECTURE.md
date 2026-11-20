@@ -68,9 +68,13 @@ Concurrent callers are coordinated by an in-flight Request ID table and conditio
 The bounded SOME/IP path also exposes a synthetic `vehicle.body/SetDoorLocks` method for recovery experiments. The fault harness may execute and journal the request while intentionally dropping the UDP response. A restarted server loads the same journal and replays the typed response for the same Client/Session-derived Request ID without invoking the Handler again. This models an uncertain network outcome over localhost, not a physical actuator transaction.
 
 The performance path uses a separate typed `vehicle.telemetry/Upload` method and a fresh runtime per matrix cell. It measures in-process runtime work only; the transport paths remain outside those latency numbers. Methodology and the full boundary are in [PERFORMANCE_MATRIX.md](PERFORMANCE_MATRIX.md).
+
+The replay path materializes versioned JSONL tasks from the frozen four-node corpus. Baseline and replay phases run in separate fresh C++ gateway processes, preserve ordered Trace-linked results and terminal snapshots, and compare canonical per-task SHA-256 digests. It is a local replay core, not yet a storage-backed distributed data platform; see [REPLAY_PIPELINE.md](REPLAY_PIPELINE.md).
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
+| replay task recorder | Python | Versioned task IDs, embedded inputs, source lineage and dataset SHA-256 |
+| replay executor | Python + C++ process | Fresh-process baseline/replay, ordered event capture and terminal digest comparison |
 
 ## Current signal ownership
 

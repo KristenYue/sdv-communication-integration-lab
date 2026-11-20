@@ -1,0 +1,11 @@
+{
+  "schema_version": "sdv-replay-task-manifest-v1",
+  "task_count": 300,
+  "unique_source_scenarios": 200,
+  "generation_counts": {
+    "1": 200,
+    "2": 100
+  },
+  "sha256": "c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980",
+  "data_boundary": "versioned_tasks_derived_from_synthetic_four_node_system_corpus"
+}
