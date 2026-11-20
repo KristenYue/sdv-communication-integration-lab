@@ -1,0 +1,17 @@
+{
+  "schema_version": "sdv-runtime-concurrency-v1",
+  "data_boundary": "single_process_multithreaded_runtime_synthetic_handlers",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "identical_threads": 32,
+  "identical_successes": 32,
+  "identical_handler_executions": 1,
+  "idempotent_replay_events": 31,
+  "in_flight_wait_events": 31,
+  "conflict_threads": 16,
+  "conflicts_rejected": 16,
+  "conflict_leader_accepted": true,
+  "capacity_limit": 2,
+  "capacity_started": 2,
+  "no_deadline_result": "QUEUE_FULL",
+  "queued_result": "QUEUE_TIMEOUT"
+}

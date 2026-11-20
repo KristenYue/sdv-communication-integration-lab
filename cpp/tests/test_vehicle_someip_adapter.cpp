@@ -42,7 +42,7 @@ void test_runtime_adapter_round_trip() {
           "snapshot payload values preserved");
     check(!snapshot.all_signal_groups_fresh,
           "missing signal groups represented as not all fresh");
-    check(runtime.trace().size() == 2U, "wire request traversed service runtime");
+    check(runtime.trace_snapshot().size() == 2U, "wire request traversed service runtime");
 }
 
 void test_adapter_errors() {

@@ -3,9 +3,12 @@
 #include "sdv/types.hpp"
 
 #include <cstdint>
+#include <condition_variable>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <variant>
@@ -81,7 +84,8 @@ public:
     using Clock = std::function<std::int64_t()>;
     using Handler = std::function<ServiceResponse(const ServiceRequest&)>;
 
-    explicit VehicleServiceRuntime(Clock clock, std::string journal_path = {});
+    explicit VehicleServiceRuntime(Clock clock, std::string journal_path = {},
+                                   std::size_t max_in_flight = 64U);
     ~VehicleServiceRuntime();
 
     bool register_service(ServiceDescriptor descriptor, Handler handler);
@@ -89,7 +93,7 @@ public:
     ServiceResponse invoke(const ServiceRequest& request);
     bool cancel(const std::string& request_id);
 
-    const std::vector<ServiceRuntimeEvent>& trace() const noexcept { return trace_; }
+    std::vector<ServiceRuntimeEvent> trace_snapshot() const;
 
 private:
     struct RegisteredService {
@@ -102,13 +106,24 @@ private:
         ServiceResponse response;
     };
 
+    struct InFlightRequest {
+        std::string fingerprint;
+    };
+
     Clock clock_;
     std::map<std::string, RegisteredService> services_;
     std::map<std::string, CompletedRequest> completed_requests_;
+    std::map<std::string, InFlightRequest> in_flight_requests_;
     std::unique_ptr<IdempotencyJournal> journal_;
     std::set<std::string> cancelled_requests_;
     std::vector<ServiceRuntimeEvent> trace_;
     std::uint64_t next_sequence_{1};
+    std::size_t active_handlers_{0};
+    std::size_t max_in_flight_{64U};
+    mutable std::mutex state_mutex_;
+    mutable std::mutex trace_mutex_;
+    mutable std::mutex journal_mutex_;
+    std::condition_variable state_changed_;
 
     void record(const ServiceRequest& request, std::string event, std::string detail);
     ServiceResponse reject(const ServiceRequest& request, std::string code,
@@ -116,6 +131,8 @@ private:
     static std::string fingerprint(const ServiceRequest& request);
     ServiceResponse complete(const ServiceRequest& request, const std::string& fingerprint,
                              ServiceResponse response, bool persist);
+    void release_in_flight(const std::string& request_id);
+    bool is_cancelled(const std::string& request_id) const;
 };
 
 bool register_vehicle_state_service(VehicleServiceRuntime& runtime,

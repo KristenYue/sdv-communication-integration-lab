@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 project(sdv_communication_integration_lab VERSION 0.1.0 LANGUAGES CXX)
 
+find_package(Threads REQUIRED)
+
 option(SDV_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -27,6 +29,7 @@ add_library(sdv_core
   cpp/src/vehicle_service_runtime.cpp
 )
 target_include_directories(sdv_core PUBLIC cpp/include)
+target_link_libraries(sdv_core PUBLIC Threads::Threads)
 if(WIN32)
   target_link_libraries(sdv_core PUBLIC ws2_32)
 endif()
@@ -51,6 +54,9 @@ target_link_libraries(sdv_idempotency_evidence PRIVATE sdv_core)
 
 add_executable(sdv_restart_recovery_evidence cpp/src/restart_recovery_evidence.cpp)
 target_link_libraries(sdv_restart_recovery_evidence PRIVATE sdv_core)
+
+add_executable(sdv_concurrency_evidence cpp/src/concurrency_evidence.cpp)
+target_link_libraries(sdv_concurrency_evidence PRIVATE sdv_core)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)

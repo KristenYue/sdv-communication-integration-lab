@@ -54,7 +54,7 @@ int main() {
     }
 
     int replay_events = 0;
-    for (const auto& event : runtime.trace()) {
+    for (const auto& event : runtime.trace_snapshot()) {
         if (event.event == "IDEMPOTENT_REPLAY") {
             ++replay_events;
         }

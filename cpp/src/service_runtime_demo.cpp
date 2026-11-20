@@ -43,6 +43,6 @@ int main() {
     std::cout << "service=vehicle.state/GetSnapshot\n"
               << "code=" << response.code << '\n'
               << "speed_kph=" << snapshot->speed_kph << '\n'
-              << "runtime_trace_events=" << runtime.trace().size() << '\n';
+              << "runtime_trace_events=" << runtime.trace_snapshot().size() << '\n';
     return EXIT_SUCCESS;
 }

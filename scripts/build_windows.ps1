@@ -32,7 +32,8 @@ $command = @(
     ('cl {0} cpp\src\someip_vehicle_server.cpp /Fe"{1}\sdv_someip_vehicle_server.exe"' -f $common, $runtimeDirectory),
     ('cl {0} cpp\src\someip_vehicle_client.cpp /Fe"{1}\sdv_someip_vehicle_client.exe"' -f $common, $runtimeDirectory),
     ('cl {0} cpp\src\idempotency_evidence.cpp /Fe"{1}\sdv_idempotency_evidence.exe"' -f $common, $runtimeDirectory),
-    ('cl {0} cpp\src\restart_recovery_evidence.cpp /Fe"{1}\sdv_restart_recovery_evidence.exe"' -f $common, $runtimeDirectory)
+    ('cl {0} cpp\src\restart_recovery_evidence.cpp /Fe"{1}\sdv_restart_recovery_evidence.exe"' -f $common, $runtimeDirectory),
+    ('cl {0} cpp\src\concurrency_evidence.cpp /Fe"{1}\sdv_concurrency_evidence.exe"' -f $common, $runtimeDirectory)
 ) -join ' && '
 
 Push-Location $repositoryRoot

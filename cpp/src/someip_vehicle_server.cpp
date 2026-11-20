@@ -68,6 +68,6 @@ int main(int argc, char** argv) {
         std::cerr << result.code << ": " << result.message << '\n';
         return EXIT_FAILURE;
     }
-    std::cout << "SERVED runtime_trace_events=" << runtime.trace().size() << '\n';
+    std::cout << "SERVED runtime_trace_events=" << runtime.trace_snapshot().size() << '\n';
     return EXIT_SUCCESS;
 }

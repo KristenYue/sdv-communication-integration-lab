@@ -62,6 +62,8 @@ Completed runtime requests are indexed by Request ID and an exact semantic finge
 The default store is in-memory and invocation is sequential. It is not described as concurrent idempotency because an in-flight coordination protocol has not yet been implemented.
 
 State-changing methods may additionally use the append-only recovery journal. A flushed `BEGIN` precedes Handler dispatch and a `COMPLETE` follows it. Cleanly completed requests recover their typed response; an unmatched `BEGIN` recovers as `COMPLETION_UNKNOWN` and is not dispatched again. CRC or schema corruption fails startup closed. Detailed state transitions and durability boundaries are in [RECOVERY_SEMANTICS.md](RECOVERY_SEMANTICS.md).
+
+Concurrent callers are coordinated by an in-flight Request ID table and condition variable. Identical followers wait and replay one terminal result; conflicting fingerprints are rejected. A configurable active-Handler bound provides `QUEUE_FULL` and Deadline-aware `QUEUE_TIMEOUT` backpressure. This is caller-thread admission control rather than an internal worker scheduler; details are in [CONCURRENCY_SEMANTICS.md](CONCURRENCY_SEMANTICS.md).
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
@@ -82,7 +84,7 @@ State-changing methods may additionally use the append-only recovery journal. A 
 - AUTOSAR compliance;
 - production SOME/IP or DDS interoperability;
 - cross-process service discovery or transport for the vehicle-service runtime;
-- power-loss durability, concurrent in-flight deduplication or real-time scheduling;
+- power-loss durability, cross-process concurrent arbitration or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
 - physical-vehicle control by an AI or diagnostic agent.

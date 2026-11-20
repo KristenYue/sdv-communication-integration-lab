@@ -4,6 +4,7 @@
 #include "sdv/vehicle_gateway.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <sstream>
 #include <stdexcept>
@@ -11,10 +12,14 @@
 
 namespace sdv {
 
-VehicleServiceRuntime::VehicleServiceRuntime(Clock clock, std::string journal_path)
-    : clock_(std::move(clock)) {
+VehicleServiceRuntime::VehicleServiceRuntime(Clock clock, std::string journal_path,
+                                             std::size_t max_in_flight)
+    : clock_(std::move(clock)), max_in_flight_(max_in_flight) {
     if (!clock_) {
         throw std::invalid_argument("vehicle service runtime requires a clock");
+    }
+    if (max_in_flight_ == 0U) {
+        throw std::invalid_argument("vehicle service runtime requires max_in_flight > 0");
     }
     if (!journal_path.empty()) {
         journal_ = std::make_unique<IdempotencyJournal>(std::move(journal_path));
@@ -33,7 +38,13 @@ VehicleServiceRuntime::VehicleServiceRuntime(Clock clock, std::string journal_pa
 
 VehicleServiceRuntime::~VehicleServiceRuntime() = default;
 
+std::vector<ServiceRuntimeEvent> VehicleServiceRuntime::trace_snapshot() const {
+    std::lock_guard lock(trace_mutex_);
+    return trace_;
+}
+
 bool VehicleServiceRuntime::register_service(ServiceDescriptor descriptor, Handler handler) {
+    std::lock_guard lock(state_mutex_);
     if (descriptor.name.empty() || descriptor.version.empty() || descriptor.methods.empty() ||
         !handler || services_.contains(descriptor.name)) {
         return false;
@@ -50,6 +61,7 @@ bool VehicleServiceRuntime::register_service(ServiceDescriptor descriptor, Handl
 }
 
 std::vector<ServiceDescriptor> VehicleServiceRuntime::discover() const {
+    std::lock_guard lock(state_mutex_);
     std::vector<ServiceDescriptor> result;
     result.reserve(services_.size());
     for (const auto& [name, service] : services_) {
@@ -61,6 +73,7 @@ std::vector<ServiceDescriptor> VehicleServiceRuntime::discover() const {
 
 void VehicleServiceRuntime::record(const ServiceRequest& request, std::string event,
                                    std::string detail) {
+    std::lock_guard lock(trace_mutex_);
     trace_.push_back(ServiceRuntimeEvent{next_sequence_++, clock_(), request.request_id,
                                          request.trace_id, request.service, request.method,
                                          std::move(event), std::move(detail)});
@@ -92,15 +105,40 @@ ServiceResponse VehicleServiceRuntime::complete(const ServiceRequest& request,
                                                 ServiceResponse response, bool persist) {
     if (persist && journal_ != nullptr) {
         std::string error;
+        std::lock_guard journal_lock(journal_mutex_);
         if (!journal_->append_complete(request.request_id, request_fingerprint, response, error)) {
             response = reject(request, "COMPLETION_UNKNOWN",
                               "terminal journal write failed after dispatch: " + error);
         }
     }
-    completed_requests_.emplace(
-        request.request_id,
-        CompletedRequest{request_fingerprint, response});
+    {
+        std::lock_guard lock(state_mutex_);
+        completed_requests_.emplace(
+            request.request_id,
+            CompletedRequest{request_fingerprint, response});
+        in_flight_requests_.erase(request.request_id);
+        if (active_handlers_ > 0U) {
+            --active_handlers_;
+        }
+    }
+    state_changed_.notify_all();
     return response;
+}
+
+void VehicleServiceRuntime::release_in_flight(const std::string& request_id) {
+    {
+        std::lock_guard lock(state_mutex_);
+        in_flight_requests_.erase(request_id);
+        if (active_handlers_ > 0U) {
+            --active_handlers_;
+        }
+    }
+    state_changed_.notify_all();
+}
+
+bool VehicleServiceRuntime::is_cancelled(const std::string& request_id) const {
+    std::lock_guard lock(state_mutex_);
+    return cancelled_requests_.contains(request_id);
 }
 
 ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
@@ -113,42 +151,141 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     if (request.principal.empty() || request.principal.size() > 64U) {
         return reject(request, "INVALID_PRINCIPAL", "principal must contain 1..64 characters");
     }
-    const auto service = services_.find(request.service);
-    if (service == services_.end()) {
+
+    Handler handler;
+    ServiceMethodDescriptor method_descriptor;
+    bool service_found = false;
+    bool method_found = false;
+    {
+        std::lock_guard lock(state_mutex_);
+        const auto service = services_.find(request.service);
+        if (service != services_.end()) {
+            service_found = true;
+            const auto& methods = service->second.descriptor.methods;
+            const auto method =
+                std::find_if(methods.begin(), methods.end(), [&](const auto& candidate) {
+                    return candidate.name == request.method;
+                });
+            if (method != methods.end()) {
+                method_found = true;
+                handler = service->second.handler;
+                method_descriptor = *method;
+            }
+        }
+    }
+    if (!service_found) {
         return reject(request, "SERVICE_NOT_FOUND", "requested service is not registered");
     }
-    const auto& methods = service->second.descriptor.methods;
-    const auto method = std::find_if(methods.begin(), methods.end(), [&](const auto& candidate) {
-        return candidate.name == request.method;
-    });
-    if (method == methods.end()) {
+    if (!method_found) {
         return reject(request, "METHOD_NOT_FOUND", "requested method is not registered");
     }
-    if (!method->required_permission.empty() &&
-        !request.permissions.contains(method->required_permission)) {
+    if (!method_descriptor.required_permission.empty() &&
+        !request.permissions.contains(method_descriptor.required_permission)) {
         return reject(request, "PERMISSION_DENIED", "principal lacks required permission");
     }
+
     const auto request_fingerprint = fingerprint(request);
-    if (const auto cached = completed_requests_.find(request.request_id);
-        cached != completed_requests_.end()) {
-        if (cached->second.fingerprint != request_fingerprint) {
-            return reject(request, "REQUEST_ID_CONFLICT",
-                          "request_id was already used for different semantic content");
+    while (true) {
+        std::unique_lock lock(state_mutex_);
+        if (const auto cached = completed_requests_.find(request.request_id);
+            cached != completed_requests_.end()) {
+            if (cached->second.fingerprint != request_fingerprint) {
+                lock.unlock();
+                return reject(request, "REQUEST_ID_CONFLICT",
+                              "request_id was already used for different semantic content");
+            }
+            const auto response = cached->second.response;
+            lock.unlock();
+            record(request, "IDEMPOTENT_REPLAY", "cached terminal response returned");
+            return response;
         }
-        record(request, "IDEMPOTENT_REPLAY", "cached terminal response returned");
-        return cached->second.response;
-    }
-    if (cancelled_requests_.contains(request.request_id)) {
-        return reject(request, "CANCELLED", "request was cancelled before dispatch");
-    }
-    if (request.deadline_ms > 0 && clock_() > request.deadline_ms) {
-        return reject(request, "DEADLINE_EXCEEDED", "deadline expired before dispatch");
+
+        if (cancelled_requests_.contains(request.request_id)) {
+            lock.unlock();
+            return reject(request, "CANCELLED", "request was cancelled before dispatch");
+        }
+
+        if (const auto in_flight = in_flight_requests_.find(request.request_id);
+            in_flight != in_flight_requests_.end()) {
+            if (in_flight->second.fingerprint != request_fingerprint) {
+                lock.unlock();
+                return reject(request, "REQUEST_ID_CONFLICT",
+                              "request_id is in flight with different semantic content");
+            }
+            lock.unlock();
+            record(request, "IN_FLIGHT_WAIT", "identical request is already executing");
+            lock.lock();
+            const auto current = in_flight_requests_.find(request.request_id);
+            if (current == in_flight_requests_.end()) {
+                continue;
+            }
+            if (current->second.fingerprint != request_fingerprint) {
+                lock.unlock();
+                return reject(request, "REQUEST_ID_CONFLICT",
+                              "request_id changed semantic content while waiting");
+            }
+            if (request.deadline_ms == 0) {
+                state_changed_.wait(lock, [&] {
+                    return !in_flight_requests_.contains(request.request_id) ||
+                           cancelled_requests_.contains(request.request_id);
+                });
+            } else {
+                const auto remaining = request.deadline_ms - clock_();
+                if (remaining <= 0 ||
+                    !state_changed_.wait_for(lock, std::chrono::milliseconds(remaining), [&] {
+                        return !in_flight_requests_.contains(request.request_id) ||
+                               cancelled_requests_.contains(request.request_id);
+                    })) {
+                    lock.unlock();
+                    return reject(request, "QUEUE_TIMEOUT",
+                                  "deadline expired while waiting for identical in-flight request");
+                }
+            }
+            continue;
+        }
+
+        if (request.deadline_ms > 0 && clock_() > request.deadline_ms) {
+            lock.unlock();
+            return reject(request, "DEADLINE_EXCEEDED", "deadline expired before dispatch");
+        }
+
+        if (active_handlers_ >= max_in_flight_) {
+            if (request.deadline_ms == 0) {
+                lock.unlock();
+                return reject(request, "QUEUE_FULL",
+                              "runtime is at capacity and request has no queue deadline");
+            }
+            lock.unlock();
+            record(request, "CAPACITY_WAIT", "request is waiting for a handler slot");
+            lock.lock();
+            if (active_handlers_ < max_in_flight_) {
+                continue;
+            }
+            const auto remaining = request.deadline_ms - clock_();
+            if (remaining <= 0 ||
+                !state_changed_.wait_for(lock, std::chrono::milliseconds(remaining), [&] {
+                    return active_handlers_ < max_in_flight_ ||
+                           cancelled_requests_.contains(request.request_id);
+                })) {
+                lock.unlock();
+                return reject(request, "QUEUE_TIMEOUT",
+                              "deadline expired while waiting for runtime capacity");
+            }
+            continue;
+        }
+
+        in_flight_requests_.emplace(request.request_id,
+                                    InFlightRequest{request_fingerprint});
+        ++active_handlers_;
+        break;
     }
 
-    const bool persist = method->state_changing && journal_ != nullptr;
+    const bool persist = method_descriptor.state_changing && journal_ != nullptr;
     if (persist) {
         std::string error;
+        std::lock_guard journal_lock(journal_mutex_);
         if (!journal_->append_begin(request.request_id, request_fingerprint, error)) {
+            release_in_flight(request.request_id);
             return reject(request, "JOURNAL_ERROR",
                           "request was not dispatched because BEGIN could not be persisted: " +
                               error);
@@ -158,7 +295,7 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     record(request, "DISPATCHED", "request passed runtime admission checks");
     ServiceResponse response;
     try {
-        response = service->second.handler(request);
+        response = handler(request);
     } catch (const std::exception& error) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           std::string("handler failed after dispatch: ") + error.what());
@@ -169,7 +306,7 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
         return complete(request, request_fingerprint, std::move(response), persist);
     }
 
-    if (cancelled_requests_.contains(request.request_id)) {
+    if (is_cancelled(request.request_id)) {
         response = reject(request, "COMPLETION_UNKNOWN",
                           "request was cancelled after dispatch; side effects may have occurred");
         return complete(request, request_fingerprint, std::move(response), persist);
@@ -187,7 +324,13 @@ bool VehicleServiceRuntime::cancel(const std::string& request_id) {
     if (request_id.empty() || request_id.size() > 64U) {
         return false;
     }
-    return cancelled_requests_.insert(request_id).second;
+    bool inserted = false;
+    {
+        std::lock_guard lock(state_mutex_);
+        inserted = cancelled_requests_.insert(request_id).second;
+    }
+    state_changed_.notify_all();
+    return inserted;
 }
 
 bool register_vehicle_state_service(VehicleServiceRuntime& runtime,

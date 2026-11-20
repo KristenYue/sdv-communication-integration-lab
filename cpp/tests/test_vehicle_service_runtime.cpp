@@ -53,7 +53,7 @@ void test_registration_discovery_and_typed_call() {
     const auto* snapshot = std::get_if<sdv::VehicleSnapshot>(&response.payload);
     check(snapshot != nullptr && snapshot->speed_kph == 123.45,
           "typed vehicle snapshot returned");
-    check(runtime.trace().size() == 2U, "dispatch and completion traced");
+    check(runtime.trace_snapshot().size() == 2U, "dispatch and completion traced");
 }
 
 void test_admission_guards() {

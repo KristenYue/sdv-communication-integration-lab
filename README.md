@@ -64,6 +64,14 @@ Windows本地执行60个状态变更请求后重启服务进程：第二进程�
 
 该证据针对进程退出/重启，不代表突然断电下的存储屏障、跨多进程写入、分布式Exactly Once或真实执行器事务。
 
+### 并发In-flight协调与背压
+
+运行时以Request ID和语义指纹协调并发调用：首个请求获得执行权；相同内容的Follower等待终态并重放响应；相同ID的冲突内容立即拒绝。`max_in_flight`限制活跃Handler数量，容量耗尽时，无Deadline请求返回`QUEUE_FULL`，有Deadline请求等待槽位并在到期后返回`QUEUE_TIMEOUT`。Trace通过加锁快照读取，Journal写入独立串行化。
+
+Windows本地实测：32个线程同时提交同一状态变更，32个调用全部成功、Handler只执行1次、31次等待后重放；首个请求执行期间的16个冲突请求全部拒绝。并发上限设为2并占满后，无Deadline请求返回`QUEUE_FULL`，50 ms Deadline请求返回`QUEUE_TIMEOUT`，两者均未进入Handler。原始结果见`benchmarks/windows-runtime-concurrency-v1.json`，详细语义见[并发与背压说明](docs/CONCURRENCY_SEMANTICS.md)。
+
+当前属于单进程多线程准入控制，Handler仍运行在调用方线程；不声称具备内部线程池、优先级调度、公平性、实时性或跨进程并发仲裁。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。
