@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -54,6 +55,30 @@ ServiceResponse VehicleServiceRuntime::reject(const ServiceRequest& request, std
     return ServiceResponse{false, std::move(code), std::move(message), std::monostate{}};
 }
 
+std::string VehicleServiceRuntime::fingerprint(const ServiceRequest& request) {
+    std::ostringstream output;
+    output << request.principal << '|' << request.service << '|' << request.method << '|';
+    if (std::holds_alternative<std::monostate>(request.payload)) {
+        output << "none";
+    } else if (const auto* query = std::get_if<GetVehicleSnapshotRequest>(&request.payload)) {
+        output << "snapshot:" << query->now_ms << ':' << query->max_age_ms;
+    } else {
+        const auto& command = std::get<SetDoorLocksRequest>(request.payload);
+        output << "door-locks:" << static_cast<unsigned int>(command.door_mask) << ':'
+               << (command.lock ? '1' : '0');
+    }
+    return output.str();
+}
+
+ServiceResponse VehicleServiceRuntime::complete(const ServiceRequest& request,
+                                                const std::string& request_fingerprint,
+                                                ServiceResponse response) {
+    completed_requests_.emplace(
+        request.request_id,
+        CompletedRequest{request_fingerprint, response});
+    return response;
+}
+
 ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     if (request.request_id.empty() || request.request_id.size() > 64U) {
         return reject(request, "INVALID_REQUEST_ID", "request_id must contain 1..64 characters");
@@ -64,10 +89,6 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     if (request.principal.empty() || request.principal.size() > 64U) {
         return reject(request, "INVALID_PRINCIPAL", "principal must contain 1..64 characters");
     }
-    if (cancelled_requests_.contains(request.request_id)) {
-        return reject(request, "CANCELLED", "request was cancelled before dispatch");
-    }
-
     const auto service = services_.find(request.service);
     if (service == services_.end()) {
         return reject(request, "SERVICE_NOT_FOUND", "requested service is not registered");
@@ -83,6 +104,19 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
         !request.permissions.contains(method->required_permission)) {
         return reject(request, "PERMISSION_DENIED", "principal lacks required permission");
     }
+    const auto request_fingerprint = fingerprint(request);
+    if (const auto cached = completed_requests_.find(request.request_id);
+        cached != completed_requests_.end()) {
+        if (cached->second.fingerprint != request_fingerprint) {
+            return reject(request, "REQUEST_ID_CONFLICT",
+                          "request_id was already used for different semantic content");
+        }
+        record(request, "IDEMPOTENT_REPLAY", "cached terminal response returned");
+        return cached->second.response;
+    }
+    if (cancelled_requests_.contains(request.request_id)) {
+        return reject(request, "CANCELLED", "request was cancelled before dispatch");
+    }
     if (request.deadline_ms > 0 && clock_() > request.deadline_ms) {
         return reject(request, "DEADLINE_EXCEEDED", "deadline expired before dispatch");
     }
@@ -92,21 +126,27 @@ ServiceResponse VehicleServiceRuntime::invoke(const ServiceRequest& request) {
     try {
         response = service->second.handler(request);
     } catch (const std::exception& error) {
-        return reject(request, "HANDLER_ERROR", error.what());
+        response = reject(request, "COMPLETION_UNKNOWN",
+                          std::string("handler failed after dispatch: ") + error.what());
+        return complete(request, request_fingerprint, std::move(response));
     } catch (...) {
-        return reject(request, "HANDLER_ERROR", "handler raised a non-standard exception");
+        response = reject(request, "COMPLETION_UNKNOWN",
+                          "handler failed after dispatch with a non-standard exception");
+        return complete(request, request_fingerprint, std::move(response));
     }
 
     if (cancelled_requests_.contains(request.request_id)) {
-        return reject(request, "COMPLETION_UNKNOWN",
-                      "request was cancelled after dispatch; side effects may have occurred");
+        response = reject(request, "COMPLETION_UNKNOWN",
+                          "request was cancelled after dispatch; side effects may have occurred");
+        return complete(request, request_fingerprint, std::move(response));
     }
     if (request.deadline_ms > 0 && clock_() > request.deadline_ms) {
-        return reject(request, "COMPLETION_UNKNOWN",
-                      "deadline expired after dispatch; side effects may have occurred");
+        response = reject(request, "COMPLETION_UNKNOWN",
+                          "deadline expired after dispatch; side effects may have occurred");
+        return complete(request, request_fingerprint, std::move(response));
     }
     record(request, response.code, response.message);
-    return response;
+    return complete(request, request_fingerprint, std::move(response));
 }
 
 bool VehicleServiceRuntime::cancel(const std::string& request_id) {

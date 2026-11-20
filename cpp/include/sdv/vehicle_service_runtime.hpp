@@ -93,8 +93,14 @@ private:
         Handler handler;
     };
 
+    struct CompletedRequest {
+        std::string fingerprint;
+        ServiceResponse response;
+    };
+
     Clock clock_;
     std::map<std::string, RegisteredService> services_;
+    std::map<std::string, CompletedRequest> completed_requests_;
     std::set<std::string> cancelled_requests_;
     std::vector<ServiceRuntimeEvent> trace_;
     std::uint64_t next_sequence_{1};
@@ -102,6 +108,9 @@ private:
     void record(const ServiceRequest& request, std::string event, std::string detail);
     ServiceResponse reject(const ServiceRequest& request, std::string code,
                            std::string message);
+    static std::string fingerprint(const ServiceRequest& request);
+    ServiceResponse complete(const ServiceRequest& request, const std::string& fingerprint,
+                             ServiceResponse response);
 };
 
 bool register_vehicle_state_service(VehicleServiceRuntime& runtime,

@@ -54,6 +54,12 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | `vehicle.state` adapter | C++20 | Read-only service boundary over the gateway snapshot |
 | bounded SOME/IP codec | C++20 | Big-endian base-header encoding/decoding and malformed-message rejection |
 | SOME/IP UDP server/client | C++20 | Cross-process localhost request/response into the vehicle-service runtime |
+
+## Idempotency boundary
+
+Completed runtime requests are indexed by Request ID and an exact semantic fingerprint over Principal, Service, Method and typed Payload. Service existence, method existence and the caller's current permission are checked before cache lookup, so replay cannot bypass authorization. An identical retry returns the cached typed response; a different fingerprint returns `REQUEST_ID_CONFLICT`. Retry-local Trace ID, permissions and Deadline do not change the operation identity. Post-dispatch uncertain outcomes are cached because repeating an operation whose side effects are unknown is unsafe.
+
+The current store is in-memory and invocation is sequential. It is intentionally not described as durable or concurrent idempotency until a journal and in-flight coordination protocol are implemented and exercised across process restarts.
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |

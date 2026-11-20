@@ -1,0 +1,13 @@
+{
+  "schema_version": "sdv-runtime-idempotency-v1",
+  "data_boundary": "single_process_sequential_in_memory_idempotency_cache",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "groups": 60,
+  "total_invocations": 180,
+  "first_successes": 60,
+  "replay_successes": 60,
+  "conflicts_rejected": 60,
+  "handler_executions": 60,
+  "duplicate_final_actions": 0,
+  "idempotent_replay_events": 60
+}

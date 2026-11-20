@@ -48,6 +48,14 @@ Linux vcan0
 
 本阶段运行时内核仍采用同步执行；其只读车辆状态方法已经接入下面的跨进程有界SOME/IP链路，但尚未声称具备动态服务发现、生产SOME/IP/DDS互操作、持久化幂等或实时调度能力。Windows/MSVC可执行演示与C++测试均已纳入构建脚本和CMake/CTest。
 
+### 请求幂等与冲突拒绝
+
+运行时保存`request_id -> (语义指纹, 终态响应)`：同一Principal、Service、Method和类型化Payload的重试直接返回原始响应，不再次调用Handler；同一Request ID携带不同语义内容时返回`REQUEST_ID_CONFLICT`。Trace ID和Deadline允许在重试时变化，不参与语义指纹。派发后超时、取消或Handler异常形成的`COMPLETION_UNKNOWN`也会被缓存，避免不确定操作被盲目重放。
+
+Windows本地证据包含60组状态变更指令、共180次调用：60次首次执行、60次相同内容重试和60次冲突内容复用；Handler实际执行60次、幂等重放60次、冲突拒绝60次、重复最终动作0次。原始结果见`benchmarks/windows-runtime-idempotency-v1.json`。
+
+当前缓存仅存在于单进程内存中，实验也是顺序调用；它不证明并发重复请求协调、进程重启后的幂等恢复或有界缓存淘汰安全。持久化Journal与并发In-flight协调属于下一阶段。
+
 ## SOME/IP有界跨进程链路
 
 第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。

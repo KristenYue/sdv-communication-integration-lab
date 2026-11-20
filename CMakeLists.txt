@@ -45,6 +45,9 @@ target_link_libraries(sdv_someip_vehicle_server PRIVATE sdv_core)
 add_executable(sdv_someip_vehicle_client cpp/src/someip_vehicle_client.cpp)
 target_link_libraries(sdv_someip_vehicle_client PRIVATE sdv_core)
 
+add_executable(sdv_idempotency_evidence cpp/src/idempotency_evidence.cpp)
+target_link_libraries(sdv_idempotency_evidence PRIVATE sdv_core)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
   target_link_libraries(sdv_socketcan_gateway PRIVATE sdv_core)

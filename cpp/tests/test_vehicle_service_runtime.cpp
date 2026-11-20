@@ -75,10 +75,12 @@ void test_admission_guards() {
     check(runtime.invoke(missing_method).code == "METHOD_NOT_FOUND", "unknown method rejected");
 
     auto bad_payload = snapshot_request();
+    bad_payload.request_id = "bad-payload";
     bad_payload.payload = sdv::SetDoorLocksRequest{0x0FU, true};
     check(runtime.invoke(bad_payload).code == "INVALID_PAYLOAD", "payload type enforced");
 
     auto expired = snapshot_request(999);
+    expired.request_id = "expired-before-dispatch";
     check(runtime.invoke(expired).code == "DEADLINE_EXCEEDED", "pre-dispatch deadline enforced");
 
     auto cancelled = snapshot_request();
@@ -117,6 +119,56 @@ void test_post_dispatch_result_uncertainty() {
           "post-dispatch timeout does not claim rollback");
     check(std::holds_alternative<std::monostate>(response.payload),
           "uncertain completion hides handler payload");
+    now = 1'000;
+    const auto replay = runtime.invoke(request);
+    check(replay.code == "COMPLETION_UNKNOWN",
+          "uncertain terminal result is replayed without re-dispatch");
+}
+
+void test_idempotent_replay_and_conflict() {
+    std::int64_t now = 1'000;
+    int executions = 0;
+    sdv::VehicleServiceRuntime runtime([&now] { return now; });
+    const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
+                                      {{"SetDoorLocks", "body.write"}}};
+    check(runtime.register_service(
+              body, [&executions](const sdv::ServiceRequest& request) {
+                  ++executions;
+                  const auto& command = std::get<sdv::SetDoorLocksRequest>(request.payload);
+                  return sdv::ServiceResponse{
+                      true, "OK", "door lock command applied",
+                      sdv::DoorLockResult{command.door_mask, command.lock}};
+              }),
+          "idempotency body service registered");
+    const sdv::ServiceRequest request{"body-command-1",
+                                      "body-trace-1",
+                                      "body-controller",
+                                      "vehicle.body",
+                                      "SetDoorLocks",
+                                      2'000,
+                                      {"body.write"},
+                                      sdv::SetDoorLocksRequest{0x0FU, true}};
+    const auto first = runtime.invoke(request);
+    auto retry = request;
+    retry.trace_id = "body-trace-retry";
+    retry.deadline_ms = 3'000;
+    const auto replay = runtime.invoke(retry);
+    check(first.accepted && replay.accepted && executions == 1,
+          "identical retry executes state-changing handler once");
+    check(std::get<sdv::DoorLockResult>(replay.payload).requested_mask == 0x0FU,
+          "identical retry returns original typed response");
+
+    auto unauthorized_retry = retry;
+    unauthorized_retry.permissions.clear();
+    check(runtime.invoke(unauthorized_retry).code == "PERMISSION_DENIED",
+          "cached response cannot bypass current permission check");
+    check(executions == 1, "unauthorized retry does not reach handler");
+
+    auto conflict = retry;
+    conflict.payload = sdv::SetDoorLocksRequest{0x03U, false};
+    check(runtime.invoke(conflict).code == "REQUEST_ID_CONFLICT",
+          "same request id with different payload rejected");
+    check(executions == 1, "conflicting retry does not reach handler");
 }
 
 }  // namespace
@@ -125,6 +177,7 @@ int main() {
     test_registration_discovery_and_typed_call();
     test_admission_guards();
     test_post_dispatch_result_uncertainty();
+    test_idempotent_replay_and_conflict();
     if (failures == 0) {
         std::cout << "All vehicle service runtime tests passed\n";
         return EXIT_SUCCESS;

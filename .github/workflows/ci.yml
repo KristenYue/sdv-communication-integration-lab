@@ -30,6 +30,12 @@ jobs:
       - name: Run bounded SOME/IP loopback on Windows
         if: runner.os == 'Windows'
         run: python scripts/run_someip_loopback.py --server build/Release/sdv_someip_vehicle_server.exe --client build/Release/sdv_someip_vehicle_client.exe --output artifacts/someip-loopback.json
+      - name: Run runtime idempotency evidence on Linux
+        if: runner.os == 'Linux'
+        run: python scripts/run_idempotency_evidence.py --executable build/sdv_idempotency_evidence --output artifacts/runtime-idempotency.json
+      - name: Run runtime idempotency evidence on Windows
+        if: runner.os == 'Windows'
+        run: python scripts/run_idempotency_evidence.py --executable build/Release/sdv_idempotency_evidence.exe --output artifacts/runtime-idempotency.json
       - name: Run frozen cross-process scenarios on Linux
         if: runner.os == 'Linux'
         run: python scripts/run_frozen_scenarios.py --gateway-bin build/sdv_gateway_cli --output artifacts/scenario-report.json
