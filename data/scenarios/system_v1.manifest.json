@@ -1,0 +1,18 @@
+{
+  "schema_version": "sdv-four-node-system-scenarios-v1",
+  "scenario_count": 200,
+  "healthy_scenarios": 100,
+  "fault_injection_scenarios": 100,
+  "frame_count": 900,
+  "categories": {
+    "fault_duplicate_vcu": 20,
+    "fault_invalid_dlc_bcm": 15,
+    "fault_range_tbox": 15,
+    "fault_stale_tpms": 20,
+    "fault_timestamp_conflict": 15,
+    "fault_unknown_identifier": 15,
+    "healthy_four_node": 100
+  },
+  "sha256": "5ba71dc14acd662810eee9fab9a85afa4e0a98a13b013da3b947701175100e82",
+  "data_boundary": "deterministic_four_node_synthetic_system_scenarios"
+}

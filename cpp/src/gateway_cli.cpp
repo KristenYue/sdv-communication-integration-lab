@@ -145,6 +145,9 @@ int main() {
                           << ",\"signal_quality_percent\":"
                           << snapshot.signal_quality_percent
                           << ",\"upload_backlog\":" << snapshot.upload_backlog
+                          << ",\"tire_kpa\":[" << snapshot.tire_kpa.at(0) << ','
+                          << snapshot.tire_kpa.at(1) << ',' << snapshot.tire_kpa.at(2) << ','
+                          << snapshot.tire_kpa.at(3) << ']'
                           << "}" << std::endl;
             } else if (parts.at(0) == "QUIT") {
                 std::cout << "{\"kind\":\"quit\",\"ok\":true}" << std::endl;

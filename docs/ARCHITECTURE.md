@@ -1,4 +1,6 @@
-# Architecture and evidence boundaries
+# Vehicle service runtime architecture and evidence boundaries
+
+The platform is organized around production-code ownership rather than test execution. The C++ communication gateway and the upcoming vehicle-service runtime are the product under development. Frozen scenarios, fault injection and replay are evidence mechanisms around that product. AI or diagnostic agents may consume the service API later, but they do not define the core architecture.
 
 ## Current executable paths
 
@@ -55,6 +57,6 @@ Path B exists to prove that the C++ data plane can receive native Linux CAN fram
 - SOME/IP or DDS interoperability;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
-- 200 complete multi-node fault scenarios.
+- physical-vehicle control by an AI or diagnostic agent.
 
 Those boundaries remain explicit until the corresponding source, environment record and reproducible result exist.

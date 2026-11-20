@@ -1,0 +1,32 @@
+{
+  "schema_version": "sdv-system-scenario-report-v1",
+  "data_boundary": "deterministic_four_node_synthetic_system_scenarios",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "gateway_executable": "sdv_gateway_cli.exe",
+  "dataset_sha256": "5ba71dc14acd662810eee9fab9a85afa4e0a98a13b013da3b947701175100e82",
+  "scenario_count": 200,
+  "healthy_scenarios": 100,
+  "fault_injection_scenarios": 100,
+  "frame_count": 900,
+  "snapshots_preserved": 200,
+  "passed": 200,
+  "failed": 0,
+  "gateway_codes": {
+    "APPLIED": 800,
+    "DUPLICATE_FRAME": 20,
+    "INVALID_DLC": 15,
+    "SIGNAL_OUT_OF_RANGE": 15,
+    "STALE_FRAME": 20,
+    "TIMESTAMP_CONFLICT": 15,
+    "UNKNOWN_CAN_ID": 15
+  },
+  "elapsed_seconds": 0.666830399990431,
+  "control_path_latency_ms": {
+    "p50": 0.0284,
+    "p95": 0.0698,
+    "p99": 0.1048,
+    "max": 0.341,
+    "scope": "local process pipe plus C++ gateway; not CAN latency"
+  },
+  "failures": []
+}
