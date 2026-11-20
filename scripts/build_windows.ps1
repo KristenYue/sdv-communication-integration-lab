@@ -13,13 +13,17 @@ $developerPrompt = Join-Path $installationPath "Common7\Tools\VsDevCmd.bat"
 $runtimeDirectory = Join-Path $repositoryRoot ".runtime\windows-build"
 New-Item -ItemType Directory -Force $runtimeDirectory | Out-Null
 
-$common = '/nologo /std:c++20 /EHsc /W4 /permissive- /Z7 /Icpp\include cpp\src\vehicle_gateway.cpp cpp\src\fault_injector.cpp'
+$common = '/nologo /std:c++20 /EHsc /W4 /permissive- /Z7 /Icpp\include cpp\src\vehicle_gateway.cpp cpp\src\fault_injector.cpp cpp\src\vehicle_service_runtime.cpp'
 $command = @(
     ('call "{0}" -arch=x64' -f $developerPrompt),
     ('cl {0} cpp\tests\test_vehicle_gateway.cpp /Fe"{1}\sdv_core_tests.exe"' -f $common, $runtimeDirectory),
     ('"{0}\sdv_core_tests.exe"' -f $runtimeDirectory),
+    ('cl {0} cpp\tests\test_vehicle_service_runtime.cpp /Fe"{1}\sdv_service_runtime_tests.exe"' -f $common, $runtimeDirectory),
+    ('"{0}\sdv_service_runtime_tests.exe"' -f $runtimeDirectory),
     ('cl {0} cpp\src\main.cpp /Fe"{1}\sdv_gateway_demo.exe"' -f $common, $runtimeDirectory),
     ('"{0}\sdv_gateway_demo.exe"' -f $runtimeDirectory),
+    ('cl {0} cpp\src\service_runtime_demo.cpp /Fe"{1}\sdv_service_runtime_demo.exe"' -f $common, $runtimeDirectory),
+    ('"{0}\sdv_service_runtime_demo.exe"' -f $runtimeDirectory),
     ('cl {0} cpp\src\gateway_cli.cpp /Fe"{1}\sdv_gateway_cli.exe"' -f $common, $runtimeDirectory)
 ) -join ' && '
 

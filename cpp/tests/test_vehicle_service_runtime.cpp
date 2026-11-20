@@ -1,0 +1,134 @@
+#include "sdv/vehicle_gateway.hpp"
+#include "sdv/vehicle_service_runtime.hpp"
+
+#include <array>
+#include <cstdlib>
+#include <iostream>
+#include <string>
+
+namespace {
+
+int failures = 0;
+
+void check(bool condition, const std::string& label) {
+    if (!condition) {
+        ++failures;
+        std::cerr << "FAIL: " << label << '\n';
+    }
+}
+
+sdv::ServiceRequest snapshot_request(std::int64_t deadline = 2'000) {
+    return sdv::ServiceRequest{"request-1",
+                               "trace-service-1",
+                               "diagnostic-ui",
+                               "vehicle.state",
+                               "GetSnapshot",
+                               deadline,
+                               {"vehicle.state.read"},
+                               sdv::GetVehicleSnapshotRequest{1'050, 100}};
+}
+
+void test_registration_discovery_and_typed_call() {
+    std::int64_t now = 1'000;
+    sdv::VehicleGateway gateway;
+    const sdv::CanFrame status{sdv::VehicleGateway::kVehicleStatusId,
+                               8U,
+                               std::array<std::uint8_t, 8>{0x39, 0x30, 75, 0, 0, 0, 0, 0},
+                               1'000,
+                               "gateway-trace"};
+    check(gateway.ingest(status).accepted, "gateway state prepared");
+
+    sdv::VehicleServiceRuntime runtime([&now] { return now; });
+    check(sdv::register_vehicle_state_service(runtime, gateway), "vehicle service registered");
+    check(!sdv::register_vehicle_state_service(runtime, gateway),
+          "duplicate service registration rejected");
+    const auto services = runtime.discover();
+    check(services.size() == 1U && services.front().name == "vehicle.state",
+          "registered service discovered");
+    check(services.front().methods.front().required_permission == "vehicle.state.read",
+          "method permission exposed in descriptor");
+
+    const auto response = runtime.invoke(snapshot_request());
+    check(response.accepted && response.code == "OK", "typed request accepted");
+    const auto* snapshot = std::get_if<sdv::VehicleSnapshot>(&response.payload);
+    check(snapshot != nullptr && snapshot->speed_kph == 123.45,
+          "typed vehicle snapshot returned");
+    check(runtime.trace().size() == 2U, "dispatch and completion traced");
+}
+
+void test_admission_guards() {
+    std::int64_t now = 1'000;
+    sdv::VehicleGateway gateway;
+    sdv::VehicleServiceRuntime runtime([&now] { return now; });
+    check(sdv::register_vehicle_state_service(runtime, gateway), "guard service registered");
+
+    auto denied = snapshot_request();
+    denied.permissions.clear();
+    check(runtime.invoke(denied).code == "PERMISSION_DENIED", "permission enforced");
+
+    auto missing_service = snapshot_request();
+    missing_service.service = "vehicle.missing";
+    check(runtime.invoke(missing_service).code == "SERVICE_NOT_FOUND", "unknown service rejected");
+
+    auto missing_method = snapshot_request();
+    missing_method.method = "Missing";
+    check(runtime.invoke(missing_method).code == "METHOD_NOT_FOUND", "unknown method rejected");
+
+    auto bad_payload = snapshot_request();
+    bad_payload.payload = sdv::SetDoorLocksRequest{0x0FU, true};
+    check(runtime.invoke(bad_payload).code == "INVALID_PAYLOAD", "payload type enforced");
+
+    auto expired = snapshot_request(999);
+    check(runtime.invoke(expired).code == "DEADLINE_EXCEEDED", "pre-dispatch deadline enforced");
+
+    auto cancelled = snapshot_request();
+    cancelled.request_id = "cancel-before-dispatch";
+    check(runtime.cancel(cancelled.request_id), "request cancellation recorded");
+    check(runtime.invoke(cancelled).code == "CANCELLED", "pre-dispatch cancellation enforced");
+}
+
+void test_post_dispatch_result_uncertainty() {
+    std::int64_t now = 1'000;
+    sdv::VehicleServiceRuntime runtime([&now] { return now; });
+    const sdv::ServiceDescriptor slow{"vehicle.body", "1.0.0", {{"SetDoorLocks", "body.write"}}};
+    check(runtime.register_service(
+              slow, [&now](const sdv::ServiceRequest& request) {
+                  now = 1'101;
+                  const auto* command = std::get_if<sdv::SetDoorLocksRequest>(&request.payload);
+                  return sdv::ServiceResponse{
+                      command != nullptr, command != nullptr ? "OK" : "INVALID_PAYLOAD",
+                      "body command processed",
+                      command != nullptr
+                          ? sdv::ServiceResponsePayload{
+                                sdv::DoorLockResult{command->door_mask, command->lock}}
+                          : sdv::ServiceResponsePayload{std::monostate{}}};
+              }),
+          "slow body service registered");
+    const sdv::ServiceRequest request{"slow-request",
+                                      "slow-trace",
+                                      "body-controller",
+                                      "vehicle.body",
+                                      "SetDoorLocks",
+                                      1'100,
+                                      {"body.write"},
+                                      sdv::SetDoorLocksRequest{0x0FU, true}};
+    const auto response = runtime.invoke(request);
+    check(response.code == "COMPLETION_UNKNOWN" && !response.accepted,
+          "post-dispatch timeout does not claim rollback");
+    check(std::holds_alternative<std::monostate>(response.payload),
+          "uncertain completion hides handler payload");
+}
+
+}  // namespace
+
+int main() {
+    test_registration_discovery_and_typed_call();
+    test_admission_guards();
+    test_post_dispatch_result_uncertainty();
+    if (failures == 0) {
+        std::cout << "All vehicle service runtime tests passed\n";
+        return EXIT_SUCCESS;
+    }
+    std::cerr << failures << " test(s) failed\n";
+    return EXIT_FAILURE;
+}

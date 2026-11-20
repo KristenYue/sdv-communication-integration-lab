@@ -23,11 +23,23 @@ Python virtual ECU sender --> Linux vcan0 --> C++ SocketCAN gateway
                                              |
                                              +--> same C++ gateway core
                                              +--> JSON evidence
+
+Path C - vehicle service runtime
+
+C++ VehicleGateway --> typed vehicle snapshot --> C++ VehicleServiceRuntime
+                                                    |
+                                                    +--> registry / discovery
+                                                    +--> permission admission
+                                                    +--> deadline / cancellation semantics
+                                                    +--> request and trace events
+                                                    +--> diagnostic, cloud or optional AI consumer
 ```
 
 Path A exists to exercise process lifecycle, multiple signal owners, restarts, correlation IDs and deterministic scenario assertions on both Windows and Linux. Its queue is orchestration infrastructure, not an automotive network.
 
 Path B exists to prove that the C++ data plane can receive native Linux CAN frames. `vcan0` is a kernel virtual CAN interface, not a physical CAN controller, vehicle harness or production ECU.
+
+Path C is the product-facing service abstraction. Its first adapter is read-only and in-process so the request contract and failure semantics can be established before adding a network transport. A timeout before dispatch means the handler did not run. A timeout or cancellation observed after dispatch returns `COMPLETION_UNKNOWN` because the runtime cannot honestly promise rollback of handler side effects.
 
 ## Component ownership
 
@@ -36,6 +48,8 @@ Path B exists to prove that the C++ data plane can receive native Linux CAN fram
 | `VehicleGateway` | C++20 | CAN identifier/DLC/range/time contract, signal state, freshness and trace |
 | `sdv_gateway_cli` | C++20 | Stable process boundary used by scenario and multi-node controllers |
 | `sdv_socketcan_gateway` | C++20/Linux | Native `PF_CAN`/`CAN_RAW` receive path into the same gateway core |
+| `VehicleServiceRuntime` | C++20 | Service registry, typed dispatch, permissions, deadlines, cancellation semantics and trace |
+| `vehicle.state` adapter | C++20 | Read-only service boundary over the gateway snapshot |
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
@@ -55,6 +69,8 @@ Path B exists to prove that the C++ data plane can receive native Linux CAN fram
 - complete DBC support;
 - AUTOSAR compliance;
 - SOME/IP or DDS interoperability;
+- cross-process service discovery or transport for the vehicle-service runtime;
+- durable idempotency, persistent request recovery or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
 - physical-vehicle control by an AI or diagnostic agent.

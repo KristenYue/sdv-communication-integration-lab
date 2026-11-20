@@ -18,6 +18,13 @@ Linux vcan0
   -> C++ SocketCAN网关
   -> 项目DBC语义与车辆状态
   -> 可审计 JSON 证据
+
+车辆信号状态
+  -> C++ Vehicle Service Runtime
+  -> 服务注册与发现
+  -> 类型化请求/响应
+  -> 权限、Deadline、Cancel与Trace
+  -> 诊断工具 / 车云任务 / 可选Agent应用
 ```
 
 这不是量产 ECU，也不声称支持完整 DBC、AUTOSAR 或真实车辆控制。当前边界是：
@@ -27,6 +34,19 @@ Linux vcan0
 - CI 同时验证 Windows/Linux 构建，并在 Linux 创建真实 `vcan0` 接口；
 - Python场景控制面通过进程管道驱动独立C++网关，冻结集与结果均保存SHA-256；
 - 所有性能、可靠性和恢复结论必须在冻结场景执行后才能写入简历。
+
+## 车辆服务运行时
+
+`VehicleServiceRuntime`把底层车辆信号从“可以读取的C++对象”提升为有明确契约的车载服务：
+
+- 以服务名、语义版本和方法描述符完成注册与发现；
+- 使用C++ `std::variant`承载类型化请求和响应，拒绝错误载荷；
+- 在运行时统一执行Principal、Permission、Deadline和Cancel准入检查；
+- Trace ID与Request ID贯穿派发、拒绝和完成事件；
+- 区分“派发前超时/取消”和“派发后结果不确定”：后者返回`COMPLETION_UNKNOWN`，不虚假声称有副作用的操作已经回滚；
+- 首个`vehicle.state/GetSnapshot`服务把现有CAN网关状态以只读权限暴露给上层消费者。
+
+本阶段是单进程、同步执行的运行时内核，还未声称具备跨进程服务发现、SOME/IP/DDS互操作、持久化幂等或实时调度能力。Windows/MSVC可执行演示与两组C++测试均已纳入构建脚本和CMake/CTest。
 
 ## 快速运行
 
@@ -49,6 +69,8 @@ python scripts\run_frozen_scenarios.py `
   --gateway-bin .runtime\windows-build\sdv_gateway_cli.exe `
   --output artifacts\windows-scenario-report.json
 ```
+
+该脚本同时运行`sdv_service_runtime_demo.exe`和车辆服务运行时测试。
 
 ## 冻结场景v1
 
