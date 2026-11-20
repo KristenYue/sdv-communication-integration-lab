@@ -33,19 +33,45 @@ sdv::CanFrame tires(std::int64_t timestamp, std::string trace = "test-tires") {
                          std::move(trace)};
 }
 
+sdv::CanFrame body(std::int64_t timestamp, std::string trace = "test-body") {
+    return sdv::CanFrame{0x102,
+                         8U,
+                         std::array<std::uint8_t, 8>{0x05, 0x0A, 0x02, 0, 0, 0, 0, 0},
+                         timestamp,
+                         std::move(trace)};
+}
+
+sdv::CanFrame tbox(std::int64_t timestamp, std::string trace = "test-tbox") {
+    return sdv::CanFrame{0x103,
+                         8U,
+                         std::array<std::uint8_t, 8>{1, 88, 0x2C, 0x01, 0, 0, 0, 0},
+                         timestamp,
+                         std::move(trace)};
+}
+
 void test_decode_and_freshness() {
     sdv::VehicleGateway gateway;
     check(gateway.ingest(status(1'000)).accepted, "vehicle status accepted");
     check(gateway.ingest(tires(1'005)).accepted, "tire pressure accepted");
+    check(gateway.ingest(body(1'006)).accepted, "body status accepted");
+    check(gateway.ingest(tbox(1'007)).accepted, "T-Box health accepted");
     const auto fresh = gateway.snapshot(1'050, 100);
     check(fresh.speed_kph == 123.45, "speed scaling decoded");
     check(fresh.battery_percent == 75, "battery decoded");
     check(fresh.door_open, "door decoded");
     check(fresh.tire_kpa.at(2) == 229, "tire pressure decoded");
-    check(!fresh.vehicle_status.stale && !fresh.tire_pressure.stale,
-          "recent signal groups are fresh");
+    check(fresh.door_open_mask == 5U && fresh.door_lock_mask == 10U,
+          "BCM door masks decoded");
+    check(fresh.wiper_state == 2U, "BCM wiper state decoded");
+    check(fresh.cloud_connected && fresh.signal_quality_percent == 88,
+          "T-Box connectivity decoded");
+    check(fresh.upload_backlog == 300, "T-Box upload backlog decoded");
+    check(!fresh.vehicle_status.stale && !fresh.tire_pressure.stale &&
+              !fresh.body_status.stale && !fresh.tbox_health.stale,
+          "all recent signal groups are fresh");
     const auto aged = gateway.snapshot(2'000, 100);
-    check(aged.vehicle_status.stale && aged.tire_pressure.stale,
+    check(aged.vehicle_status.stale && aged.tire_pressure.stale && aged.body_status.stale &&
+              aged.tbox_health.stale,
           "old signal groups become stale independently");
 }
 
@@ -80,6 +106,14 @@ void test_signal_boundaries() {
     pressure.data.at(1) = 0x03;
     check(gateway.ingest(pressure).code == "SIGNAL_OUT_OF_RANGE",
           "tire pressure project boundary enforced");
+    auto invalid_wiper = body(3);
+    invalid_wiper.data.at(2) = 4;
+    check(gateway.ingest(invalid_wiper).code == "SIGNAL_OUT_OF_RANGE",
+          "BCM wiper range enforced");
+    auto invalid_signal = tbox(4);
+    invalid_signal.data.at(1) = 101;
+    check(gateway.ingest(invalid_signal).code == "SIGNAL_OUT_OF_RANGE",
+          "T-Box signal quality range enforced");
 }
 
 void test_deterministic_faults() {

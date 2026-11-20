@@ -72,11 +72,13 @@ std::array<std::uint8_t, 8> parse_payload(const std::string& text) {
     return payload;
 }
 
-void emit_result(const sdv::IngestResult& result) {
+void emit_result(const sdv::IngestResult& result, std::uint32_t frame_id,
+                 const std::string& trace_id) {
     std::cout << "{\"kind\":\"frame_result\",\"accepted\":"
               << (result.accepted ? "true" : "false") << ",\"code\":\""
               << json_escape(result.code) << "\",\"message\":\""
-              << json_escape(result.message) << "\"}" << std::endl;
+              << json_escape(result.message) << "\",\"frame_id\":" << frame_id
+              << ",\"trace_id\":\"" << json_escape(trace_id) << "\"}" << std::endl;
 }
 
 void emit_cli_error(const std::string& message) {
@@ -111,8 +113,9 @@ int main() {
                     static_cast<std::uint8_t>(std::stoul(parts.at(2), nullptr, 10));
                 const auto timestamp =
                     static_cast<std::int64_t>(std::stoll(parts.at(4), nullptr, 10));
-                emit_result(gateway.ingest(sdv::CanFrame{
-                    identifier, dlc, parse_payload(parts.at(3)), timestamp, parts.at(5)}));
+                const sdv::CanFrame frame{
+                    identifier, dlc, parse_payload(parts.at(3)), timestamp, parts.at(5)};
+                emit_result(gateway.ingest(frame), frame.id, frame.trace_id);
             } else if (parts.at(0) == "SNAPSHOT") {
                 if (parts.size() != 3U) {
                     throw std::invalid_argument("SNAPSHOT requires now_ms and max_age_ms");
@@ -127,6 +130,21 @@ int main() {
                           << (snapshot.vehicle_status.stale ? "true" : "false")
                           << ",\"tire_pressure_stale\":"
                           << (snapshot.tire_pressure.stale ? "true" : "false")
+                          << ",\"body_status_stale\":"
+                          << (snapshot.body_status.stale ? "true" : "false")
+                          << ",\"tbox_health_stale\":"
+                          << (snapshot.tbox_health.stale ? "true" : "false")
+                          << ",\"door_open_mask\":"
+                          << static_cast<unsigned int>(snapshot.door_open_mask)
+                          << ",\"door_lock_mask\":"
+                          << static_cast<unsigned int>(snapshot.door_lock_mask)
+                          << ",\"wiper_state\":"
+                          << static_cast<unsigned int>(snapshot.wiper_state)
+                          << ",\"cloud_connected\":"
+                          << (snapshot.cloud_connected ? "true" : "false")
+                          << ",\"signal_quality_percent\":"
+                          << snapshot.signal_quality_percent
+                          << ",\"upload_backlog\":" << snapshot.upload_backlog
                           << "}" << std::endl;
             } else if (parts.at(0) == "QUIT") {
                 std::cout << "{\"kind\":\"quit\",\"ok\":true}" << std::endl;

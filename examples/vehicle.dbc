@@ -11,4 +11,12 @@ BO_ 257 TirePressure: 8 Vehicle
  SG_ FrontRight : 16|16@1+ (1,0) [0|1000] "kPa" Gateway
  SG_ RearLeft : 32|16@1+ (1,0) [0|1000] "kPa" Gateway
  SG_ RearRight : 48|16@1+ (1,0) [0|1000] "kPa" Gateway
+BO_ 258 BodyStatus: 8 BCM
+ SG_ DoorOpenMask : 0|4@1+ (1,0) [0|15] "" Gateway
+ SG_ DoorLockMask : 8|4@1+ (1,0) [0|15] "" Gateway
+ SG_ WiperState : 16|8@1+ (1,0) [0|3] "" Gateway
+BO_ 259 TBoxHealth: 8 TBox
+ SG_ CloudConnected : 0|8@1+ (1,0) [0|1] "" Gateway
+ SG_ SignalQuality : 8|8@1+ (1,0) [0|100] "%" Gateway
+ SG_ UploadBacklog : 16|16@1+ (1,0) [0|65535] "messages" Gateway
 

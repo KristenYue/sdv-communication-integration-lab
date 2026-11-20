@@ -56,6 +56,19 @@ Windows 11 / MSVC本地实测：220/220场景通过、300次帧提交、失败0�
 
 首次端到端运行发现并修复了`QUIT`确认与子进程退出之间的清理竞争，见 [工程日志](docs/ENGINEERING_LOG.md)。
 
+## 四节点系统集成
+
+VCU、TPMS、BCM和T-Box分别作为独立Python进程运行，C++网关作为第五个进程持续接收。Windows本地实验采用2代节点、每代每节点30帧：
+
+- 240/240帧被C++网关接收；
+- 每个节点60帧，代际分布120/120；
+- 第二代节点产生4次进程重启/重新接入；
+- 240条Trace ID全部唯一；
+- 最终VCU、TPMS、BCM、T-Box四组状态均未过期；
+- p50/p95/p99控制路径延迟为0.0388/0.0863/0.1442 ms。
+
+该实验的多进程队列是仿真控制通道，不是CAN或车载以太网；真实Linux传输由单独的SocketCAN链路验证。原始结果见 `benchmarks/windows-multinode-v1.json`，结构和边界见 [架构说明](docs/ARCHITECTURE.md)。
+
 Linux SocketCAN 验收：
 
 ```bash

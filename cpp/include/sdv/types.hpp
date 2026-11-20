@@ -29,10 +29,18 @@ struct SignalGroupState {
 struct VehicleSnapshot {
     SignalGroupState vehicle_status;
     SignalGroupState tire_pressure;
+    SignalGroupState body_status;
+    SignalGroupState tbox_health;
     double speed_kph{0.0};
     int battery_percent{0};
     bool door_open{false};
     std::array<int, 4> tire_kpa{};
+    std::uint8_t door_open_mask{0};
+    std::uint8_t door_lock_mask{0};
+    std::uint8_t wiper_state{0};
+    bool cloud_connected{false};
+    int signal_quality_percent{0};
+    int upload_backlog{0};
 };
 
 struct TraceEvent {

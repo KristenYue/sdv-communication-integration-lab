@@ -12,6 +12,8 @@ class VehicleGateway {
 public:
     static constexpr std::uint32_t kVehicleStatusId = 0x100;
     static constexpr std::uint32_t kTirePressureId = 0x101;
+    static constexpr std::uint32_t kBodyStatusId = 0x102;
+    static constexpr std::uint32_t kTboxHealthId = 0x103;
 
     IngestResult ingest(const CanFrame& frame);
     VehicleSnapshot snapshot(std::int64_t now_ms, std::int64_t max_age_ms) const;

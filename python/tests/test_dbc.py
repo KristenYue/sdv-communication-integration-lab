@@ -12,6 +12,18 @@ def test_vehicle_status_and_tire_pressure_decode():
     assert status["signals"] == {"Speed": 123.45, "Battery": 75.0, "DoorOpen": 1.0}
     tire = dbc.decode(257, bytes.fromhex("e600e700e500e800"))
     assert tire["signals"]["RearLeft"] == 229.0
+    body = dbc.decode(258, bytes.fromhex("050a020000000000"))
+    assert body["signals"] == {
+        "DoorOpenMask": 5.0,
+        "DoorLockMask": 10.0,
+        "WiperState": 2.0,
+    }
+    tbox = dbc.decode(259, bytes.fromhex("01582c0100000000"))
+    assert tbox["signals"] == {
+        "CloudConnected": 1.0,
+        "SignalQuality": 88.0,
+        "UploadBacklog": 300.0,
+    }
 
 
 def test_contract_rejects_unknown_identifier_and_bad_dlc():

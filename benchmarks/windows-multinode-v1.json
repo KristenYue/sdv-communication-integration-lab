@@ -1,0 +1,62 @@
+{
+  "schema_version": "sdv-multinode-report-v1",
+  "data_boundary": "four_virtual_ecu_processes_over_multiprocessing_control_queue",
+  "transport_note": "simulation control transport; not CAN or automotive Ethernet",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "gateway_executable": "sdv_gateway_cli.exe",
+  "nodes": [
+    "bcm",
+    "tbox",
+    "tpms",
+    "vcu"
+  ],
+  "generations": 2,
+  "frames_per_generation": 30,
+  "process_restarts": 4,
+  "frame_count": 240,
+  "node_counts": {
+    "bcm": 60,
+    "tbox": 60,
+    "tpms": 60,
+    "vcu": 60
+  },
+  "generation_counts": {
+    "0": 120,
+    "1": 120
+  },
+  "gateway_codes": {
+    "APPLIED": 240
+  },
+  "invariants": {
+    "all_frames_applied": true,
+    "frame_count_complete": true,
+    "trace_ids_unique": true,
+    "node_counts_complete": true,
+    "all_signal_groups_fresh": true
+  },
+  "passed": true,
+  "failures": [],
+  "final_snapshot": {
+    "kind": "snapshot",
+    "speed_kph": 42.95,
+    "battery_percent": 61,
+    "door_open": true,
+    "vehicle_status_stale": false,
+    "tire_pressure_stale": false,
+    "body_status_stale": false,
+    "tbox_health_stale": false,
+    "door_open_mask": 11,
+    "door_lock_mask": 4,
+    "wiper_state": 3,
+    "cloud_connected": true,
+    "signal_quality_percent": 81,
+    "upload_backlog": 177
+  },
+  "control_path_latency_ms": {
+    "p50": 0.0388,
+    "p95": 0.0863,
+    "p99": 0.1442,
+    "max": 0.2062,
+    "scope": "multi-process controller plus local pipe and C++ gateway; not CAN latency"
+  }
+}
