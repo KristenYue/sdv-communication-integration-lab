@@ -46,7 +46,15 @@ Linux vcan0
 - 区分“派发前超时/取消”和“派发后结果不确定”：后者返回`COMPLETION_UNKNOWN`，不虚假声称有副作用的操作已经回滚；
 - 首个`vehicle.state/GetSnapshot`服务把现有CAN网关状态以只读权限暴露给上层消费者。
 
-本阶段是单进程、同步执行的运行时内核，还未声称具备跨进程服务发现、SOME/IP/DDS互操作、持久化幂等或实时调度能力。Windows/MSVC可执行演示与两组C++测试均已纳入构建脚本和CMake/CTest。
+本阶段运行时内核仍采用同步执行；其只读车辆状态方法已经接入下面的跨进程有界SOME/IP链路，但尚未声称具备动态服务发现、生产SOME/IP/DDS互操作、持久化幂等或实时调度能力。Windows/MSVC可执行演示与C++测试均已纳入构建脚本和CMake/CTest。
+
+## SOME/IP有界跨进程链路
+
+第二条通信链路使用两个独立C++进程，在localhost UDP上完成`vehicle.state/GetSnapshot`请求/响应。实现遵循AUTOSAR SOME/IP的16字节基础头布局，覆盖Service/Method ID、Length、Client/Session ID、协议与接口版本、消息类型和返回码；同时校验精确报文长度、4 KiB项目载荷上限、请求身份关联和错误服务/方法。
+
+Windows本地实测中，服务端收到请求后实际进入`VehicleServiceRuntime`，读取由VCU、TPMS、BCM和T-Box状态组成的车辆快照，再向客户端返回123.45 km/h、75%电量和四组信号新鲜状态。原始报告见`benchmarks/windows-someip-loopback-v1.json`。
+
+这不是完整AUTOSAR SOME/IP栈：当前没有Service Discovery、事件组、订阅、SOME/IP-TP、E2E Profile、安全机制或vsomeip互操作验证。报告中的总耗时还包含进程启动和Python编排，不能作为SOME/IP网络时延。完整边界和载荷Schema见[有界SOME/IP说明](docs/SOMEIP_SUBSET.md)。
 
 ## 快速运行
 
@@ -71,6 +79,16 @@ python scripts\run_frozen_scenarios.py `
 ```
 
 该脚本同时运行`sdv_service_runtime_demo.exe`和车辆服务运行时测试。
+
+跨进程SOME/IP有界链路：
+
+```powershell
+$env:PYTHONPATH = "python"
+python scripts\run_someip_loopback.py `
+  --server .runtime\windows-build\sdv_someip_vehicle_server.exe `
+  --client .runtime\windows-build\sdv_someip_vehicle_client.exe `
+  --output artifacts\someip-loopback.json
+```
 
 ## 冻结场景v1
 

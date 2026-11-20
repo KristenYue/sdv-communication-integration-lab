@@ -19,10 +19,16 @@ endif()
 
 add_library(sdv_core
   cpp/src/fault_injector.cpp
+  cpp/src/someip.cpp
+  cpp/src/someip_udp.cpp
   cpp/src/vehicle_gateway.cpp
+  cpp/src/vehicle_someip_adapter.cpp
   cpp/src/vehicle_service_runtime.cpp
 )
 target_include_directories(sdv_core PUBLIC cpp/include)
+if(WIN32)
+  target_link_libraries(sdv_core PUBLIC ws2_32)
+endif()
 
 add_executable(sdv_gateway_demo cpp/src/main.cpp)
 target_link_libraries(sdv_gateway_demo PRIVATE sdv_core)
@@ -32,6 +38,12 @@ target_link_libraries(sdv_gateway_cli PRIVATE sdv_core)
 
 add_executable(sdv_service_runtime_demo cpp/src/service_runtime_demo.cpp)
 target_link_libraries(sdv_service_runtime_demo PRIVATE sdv_core)
+
+add_executable(sdv_someip_vehicle_server cpp/src/someip_vehicle_server.cpp)
+target_link_libraries(sdv_someip_vehicle_server PRIVATE sdv_core)
+
+add_executable(sdv_someip_vehicle_client cpp/src/someip_vehicle_client.cpp)
+target_link_libraries(sdv_someip_vehicle_client PRIVATE sdv_core)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
@@ -46,4 +58,12 @@ add_test(NAME sdv_core_tests COMMAND sdv_core_tests)
 add_executable(sdv_service_runtime_tests cpp/tests/test_vehicle_service_runtime.cpp)
 target_link_libraries(sdv_service_runtime_tests PRIVATE sdv_core)
 add_test(NAME sdv_service_runtime_tests COMMAND sdv_service_runtime_tests)
+
+add_executable(sdv_someip_tests cpp/tests/test_someip.cpp)
+target_link_libraries(sdv_someip_tests PRIVATE sdv_core)
+add_test(NAME sdv_someip_tests COMMAND sdv_someip_tests)
+
+add_executable(sdv_vehicle_someip_adapter_tests cpp/tests/test_vehicle_someip_adapter.cpp)
+target_link_libraries(sdv_vehicle_someip_adapter_tests PRIVATE sdv_core)
+add_test(NAME sdv_vehicle_someip_adapter_tests COMMAND sdv_vehicle_someip_adapter_tests)
 

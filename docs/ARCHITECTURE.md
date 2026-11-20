@@ -41,6 +41,8 @@ Path B exists to prove that the C++ data plane can receive native Linux CAN fram
 
 Path C is the product-facing service abstraction. Its first adapter is read-only and in-process so the request contract and failure semantics can be established before adding a network transport. A timeout before dispatch means the handler did not run. A timeout or cancellation observed after dispatch returns `COMPLETION_UNKNOWN` because the runtime cannot honestly promise rollback of handler side effects.
 
+Path D carries that read-only method across two C++ processes using a bounded SOME/IP header and localhost UDP. The server maps Service ID `0x1234` and Method ID `0x0001` into the same typed runtime call. This proves cross-process request correlation and dispatch, not Service Discovery or production-stack interoperability.
+
 ## Component ownership
 
 | Component | Language | Responsibility |
@@ -50,6 +52,8 @@ Path C is the product-facing service abstraction. Its first adapter is read-only
 | `sdv_socketcan_gateway` | C++20/Linux | Native `PF_CAN`/`CAN_RAW` receive path into the same gateway core |
 | `VehicleServiceRuntime` | C++20 | Service registry, typed dispatch, permissions, deadlines, cancellation semantics and trace |
 | `vehicle.state` adapter | C++20 | Read-only service boundary over the gateway snapshot |
+| bounded SOME/IP codec | C++20 | Big-endian base-header encoding/decoding and malformed-message rejection |
+| SOME/IP UDP server/client | C++20 | Cross-process localhost request/response into the vehicle-service runtime |
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
@@ -68,7 +72,7 @@ Path C is the product-facing service abstraction. Its first adapter is read-only
 - physical CAN bus or vehicle integration;
 - complete DBC support;
 - AUTOSAR compliance;
-- SOME/IP or DDS interoperability;
+- production SOME/IP or DDS interoperability;
 - cross-process service discovery or transport for the vehicle-service runtime;
 - durable idempotency, persistent request recovery or real-time scheduling;
 - deterministic real-time guarantees;

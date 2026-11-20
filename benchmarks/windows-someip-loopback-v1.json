@@ -1,0 +1,13 @@
+{
+  "schema_version": "sdv-someip-loopback-v1",
+  "data_boundary": "localhost_udp_bounded_someip_subset_not_autosar_conformance",
+  "server_ready": "READY port=30492",
+  "server_result": "SERVED runtime_trace_events=2",
+  "service": "vehicle.state",
+  "method": "GetSnapshot",
+  "request_identity_preserved": true,
+  "speed_kph": 123.45,
+  "battery_percent": 75,
+  "all_signal_groups_fresh": true,
+  "elapsed_ms": 41.8872
+}
