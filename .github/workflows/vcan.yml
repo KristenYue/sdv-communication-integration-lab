@@ -1,9 +1,9 @@
 name: Linux SocketCAN evidence
 on:
   push:
-    paths: ['python/**', 'scripts/verify_vcan.py', 'examples/vehicle.dbc', '.github/workflows/vcan.yml']
+    paths: ['cpp/**', 'python/**', 'scripts/send_vcan_frames.py', 'scripts/verify_vcan.py', 'scripts/verify_cpp_vcan_report.py', 'CMakeLists.txt', 'examples/vehicle.dbc', '.github/workflows/vcan.yml']
   pull_request:
-    paths: ['python/**', 'scripts/verify_vcan.py', 'examples/vehicle.dbc', '.github/workflows/vcan.yml']
+    paths: ['cpp/**', 'python/**', 'scripts/send_vcan_frames.py', 'scripts/verify_vcan.py', 'scripts/verify_cpp_vcan_report.py', 'CMakeLists.txt', 'examples/vehicle.dbc', '.github/workflows/vcan.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,6 +38,15 @@ jobs:
           python scripts/send_vcan_frames.py --interface vcan0
           wait "$gateway_pid"
           python scripts/verify_cpp_vcan_report.py --report artifacts/cpp-vcan.json
+      - name: Drive SocketCAN faults into vehicle diagnostics
+        run: |
+          set -euo pipefail
+          ./build/sdv_socketcan_gateway --interface vcan0 --count 8 --output artifacts/cpp-vcan-diagnostic.json --diagnostics --frames-per-cycle 4 --freshness-limit-ms 1000 &
+          gateway_pid=$!
+          sleep 0.2
+          python scripts/send_vcan_frames.py --interface vcan0 --diagnostic-sequence
+          wait "$gateway_pid"
+          python scripts/verify_cpp_vcan_report.py --report artifacts/cpp-vcan-diagnostic.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
