@@ -22,6 +22,7 @@ endif()
 add_library(sdv_core
   cpp/src/diagnostic_manager.cpp
   cpp/src/fault_injector.cpp
+  cpp/src/gateway_diagnostic_bridge.cpp
   cpp/src/idempotency_journal.cpp
   cpp/src/someip.cpp
   cpp/src/someip_udp.cpp
@@ -78,6 +79,10 @@ target_link_libraries(sdv_diagnostic_evidence PRIVATE sdv_core)
 add_executable(sdv_diagnostic_service_evidence cpp/src/diagnostic_service_evidence.cpp)
 target_link_libraries(sdv_diagnostic_service_evidence PRIVATE sdv_core)
 
+add_executable(sdv_gateway_diagnostic_bridge_evidence
+  cpp/src/gateway_diagnostic_bridge_evidence.cpp)
+target_link_libraries(sdv_gateway_diagnostic_bridge_evidence PRIVATE sdv_core)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
   target_link_libraries(sdv_socketcan_gateway PRIVATE sdv_core)
@@ -103,4 +108,9 @@ add_test(NAME sdv_vehicle_someip_adapter_tests COMMAND sdv_vehicle_someip_adapte
 add_executable(sdv_diagnostic_manager_tests cpp/tests/test_diagnostic_manager.cpp)
 target_link_libraries(sdv_diagnostic_manager_tests PRIVATE sdv_core)
 add_test(NAME sdv_diagnostic_manager_tests COMMAND sdv_diagnostic_manager_tests)
+
+add_executable(sdv_gateway_diagnostic_bridge_tests
+  cpp/tests/test_gateway_diagnostic_bridge.cpp)
+target_link_libraries(sdv_gateway_diagnostic_bridge_tests PRIVATE sdv_core)
+add_test(NAME sdv_gateway_diagnostic_bridge_tests COMMAND sdv_gateway_diagnostic_bridge_tests)
 

@@ -76,6 +76,8 @@ Windows本地实测：32个线程同时提交同一状态变更，32个调用全
 
 `DiagnosticManager`把合成车辆故障提升为有状态诊断记录：DTC必须预注册；同一Operation Cycle内重复失败不增加Occurrence；首个失败周期进入Pending并冻结车辆快照，连续第二个失败周期进入Confirmed；两个通过周期清除Pending、三个通过周期老化Confirmed。Freeze Frame保存速度、电量、车门、四轮胎压、BCM和T-Box关键状态。
 
+`GatewayDiagnosticBridge`进一步打通通信与诊断：按Operation Cycle聚合网关结果，将DLC错误、信号越界、帧时序冲突、未知CAN ID以及VCU/TPMS/BCM/T-Box信号超时自动映射为8个预注册DTC。周期级提交避免高频帧放大Occurrence，并用健康周期驱动Aging；原始帧Trace和首次故障车辆快照分别进入DTC来源与Freeze Frame。
+
 诊断访问采用有界的Default/Extended Session、5秒会话超时、Seed/Key挑战和三次错误Key后的10秒Lockout。清除DTC必须处于Extended Session且已解锁，清除后撤销权限。该Seed/Key仅是状态机测试算法，不是量产密码学。
 
 诊断核心已经接入类型化`vehicle.diagnostics`服务，提供`StartSession`、`RequestSecuritySeed`、`SubmitSecurityKey`、`ReadDTCInformation`和`ClearDiagnosticInformation`五个方法。服务运行时统一执行Principal/Permission、Request ID、Deadline、载荷类型与Trace边界；客户端不能通过载荷控制服务端会话时钟。相同Clear请求的重试返回缓存终态，不会再次清除。每次新的Session/Seed/Key协议交换必须使用新的Request ID，仅相同逻辑调用的重试可复用ID。
@@ -83,6 +85,8 @@ Windows本地实测：32个线程同时提交同一状态变更，32个调用全
 Windows与Linux证据均包含20个DTC、40个跨周期失败报告和20次同周期重复报告：20/20进入Confirmed、20/20 Freeze Frame保留，重启后恢复20/20；30次未授权清除全部拒绝，20组错误Key全部进入Lockout；授权清除后再次重启Active DTC为0，损坏Journal失败关闭，全流程产生166条Trace。原始报告见`benchmarks/windows-diagnostic-evidence-v1.json`和`benchmarks/linux-diagnostic-evidence-v1.json`，完整语义与边界见[诊断说明](docs/DIAGNOSTICS.md)。
 
 Windows与Linux类型化服务接入证据进一步覆盖5个可发现方法、50次权限拒绝、10个DTC授权读取、默认会话清除拒绝、会话/解锁/清除完整链路，以及相同Clear请求的一次幂等回放；清除后Active DTC为0，两平台分别产生65条运行时Trace和26条诊断Trace。原始报告见`benchmarks/windows-diagnostic-service-evidence-v1.json`与`benchmarks/linux-diagnostic-service-evidence-v1.json`。
+
+Windows网关桥接证据中，两次故障周期自动确认8/8 DTC，8/8 Freeze Frame有效、Occurrence均为2、来源Trace全部可区分；类型化服务和SOME/IP适配器均读取到8个Active DTC。原始报告见`benchmarks/windows-gateway-diagnostic-bridge-evidence-v1.json`。
 
 诊断服务还映射到有界SOME/IP Service ID `0x1236`和五个Method ID。独立C++客户端/服务端经localhost UDP执行7次调用：读取10个Confirmed DTC、验证默认会话清除拒绝、完成Extended Session与Seed/Key、授权清除并确认末态0个Active DTC。线协议将传输错误与诊断应用状态分层，DTC使用固定九字节记录。Windows与Linux得到一致的14条运行时Trace和26条诊断Trace；原始报告见`benchmarks/windows-diagnostic-someip-evidence-v1.json`与`benchmarks/linux-diagnostic-someip-evidence-v1.json`。
 

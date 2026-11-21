@@ -70,6 +70,10 @@ try {
     Invoke-NativeBuild `
         -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\tests\test_diagnostic_manager.cpp') `
         -Output "$runtimeDirectory\sdv_diagnostic_manager_tests.exe" -Run
+    Invoke-NativeBuild `
+        -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\gateway_diagnostic_bridge.cpp',
+                   'cpp\tests\test_gateway_diagnostic_bridge.cpp') `
+        -Output "$runtimeDirectory\sdv_gateway_diagnostic_bridge_tests.exe" -Run
     Invoke-NativeBuild -Sources @('cpp\src\main.cpp') `
         -Output "$runtimeDirectory\sdv_gateway_demo.exe" -Run
     Invoke-NativeBuild -Sources @('cpp\src\service_runtime_demo.cpp') `
@@ -101,6 +105,11 @@ try {
         -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\vehicle_diagnostic_service.cpp',
                    'cpp\src\diagnostic_service_evidence.cpp') `
         -Output "$runtimeDirectory\sdv_diagnostic_service_evidence.exe"
+    Invoke-NativeBuild `
+        -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\gateway_diagnostic_bridge.cpp',
+                   'cpp\src\vehicle_diagnostic_service.cpp',
+                   'cpp\src\gateway_diagnostic_bridge_evidence.cpp') `
+        -Output "$runtimeDirectory\sdv_gateway_diagnostic_bridge_evidence.exe"
 } finally {
     Pop-Location
 }

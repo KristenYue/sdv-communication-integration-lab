@@ -45,6 +45,7 @@
 - [x] 有界诊断核心：Operation Cycle、Pending/Confirmed/Aging、首次Freeze Frame、Extended Session、Security Lockout、授权清除与CRC Journal恢复；20个DTC重启恢复和清除证据全部通过；
 - [x] 诊断核心接入类型化`vehicle.diagnostics`服务：5个方法经过服务发现、Principal/Permission、Deadline、Request ID与Trace边界；50次越权读取全部拒绝，授权完成会话/解锁/清除，相同Clear重试由运行时幂等回放；当前为进程内接入，不冒充远程UDS/DoIP；
 - [x] 诊断服务的有界SOME/IP/UDP跨进程映射：独立C++客户端/服务端执行DTC读取、默认会话拒绝、Extended Session、Seed/Key、授权清除和末态读取共7次请求；传输错误与应用状态分层，当前是localhost项目协议，不冒充AUTOSAR、UDS或DoIP；
+- [x] 网关故障到诊断的自动桥接：8个周期级监控器覆盖DLC、信号范围、帧时序、未知CAN ID及VCU/TPMS/BCM/T-Box超时；两次故障周期确认8/8 DTC并保留Freeze Frame与源Trace，类型化服务和SOME/IP适配器读取结果一致；
 - [x] 3种频率 × 3种载荷 × 3种节点规模的27格Release性能矩阵，报告吞吐、p50/p95/p99、进程CPU与常驻内存；
 - [x] 回放数据闭环与Linux真实`vcan0`远端证据；当前Journal仍不声称断电级持久性。
 

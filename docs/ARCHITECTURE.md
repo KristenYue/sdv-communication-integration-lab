@@ -35,6 +35,11 @@ C++ VehicleGateway --> typed vehicle snapshot --> C++ VehicleServiceRuntime
                                                     +--> vehicle.state adapter
                                                     +--> vehicle.diagnostics adapter --> DiagnosticManager
                                                     +--> cloud or optional AI consumer
+
+VehicleGateway --> GatewayDiagnosticBridge --> DiagnosticManager
+      |                |
+      |                +--> cycle-level contract and freshness monitors
+      +--> ingest result / stale snapshot / source Trace ID
 ```
 
 Path A exists to exercise process lifecycle, multiple signal owners, restarts, correlation IDs and deterministic scenario assertions on both Windows and Linux. Its queue is orchestration infrastructure, not an automotive network.
@@ -70,6 +75,7 @@ Path E maps `vehicle.diagnostics` to project-bounded SOME/IP Service ID `0x1236`
 | replay object store | Python + Arrow + SQLite | Explicit Parquet schemas, content-addressed files, metadata and verified readback |
 | PostgreSQL replay store | Python + PostgreSQL | Server-clock leases, row-level claims, fencing and idempotent result commits |
 | `DiagnosticManager` | C++20 | Operation-cycle DTC state, freeze frames, sessions, security lockout, clear and journal recovery |
+| `GatewayDiagnosticBridge` | C++20 | Cycle-level mapping from gateway contract/freshness failures to eight pre-registered DTC monitors |
 
 ## Idempotency boundary
 
@@ -90,6 +96,8 @@ The replay path materializes versioned JSONL tasks from the frozen four-node cor
 The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monotonically increasing fencing tokens and idempotent result commits. Four worker threads each own a separate C++ gateway process. This demonstrates worker coordination on one host, not a PostgreSQL or multi-host control plane; see [REPLAY_SCHEDULER.md](REPLAY_SCHEDULER.md).
 
 The PostgreSQL adapter replaces SQLite's database-wide writer serialization with dataset-scoped `FOR UPDATE SKIP LOCKED` claims and database-server lease time. A PostgreSQL 16.16 service-container run completed 300 tasks through 8 independent C++ gateway workers and 60 lease-control groups; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md). It remains a single database service and single CI host rather than a high-availability or multi-host deployment.
+
+The gateway-diagnostic bridge aggregates observations over one operation cycle before reporting each monitor exactly once. Four contract monitors cover invalid DLC, out-of-range signals, stale/conflicting frame order and unknown CAN identifiers. Four freshness monitors cover VCU, TPMS, BCM and T-Box signal groups. This prevents high-frequency frames from inflating DTC occurrence counts and provides explicit passing cycles for aging. The first failed cycle's gateway snapshot becomes the freeze frame and the originating frame Trace ID is retained. Current monitor thresholds and DTC codes are project policy, not OEM calibration.
 
 ## Current signal ownership
 
