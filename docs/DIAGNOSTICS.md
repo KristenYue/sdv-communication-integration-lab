@@ -73,7 +73,7 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 
 ## 类型化服务接入证据
 
-`benchmarks/windows-diagnostic-service-evidence-v1.json`记录当前Windows本地接入证据：
+`benchmarks/windows-diagnostic-service-evidence-v1.json`与`benchmarks/linux-diagnostic-service-evidence-v1.json`记录Windows本地及GitHub Ubuntu Runner接入证据：
 
 - 服务发现返回5个诊断方法；
 - 50次缺少`diagnostic.read`权限的读取全部在运行时拒绝；
@@ -84,4 +84,4 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 - 清除后Active DTC为0；
 - 运行时与诊断核心分别产生65和26条Trace事件。
 
-该证据采用进程内类型化调用与合成DTC。它证明服务契约、权限边界、诊断状态机组合和清除重试语义，不证明远程UDS、DoIP、CAN-TP、SOME/IP诊断映射、物理ECU或诊断仪互操作。Linux对应报告由CI在原生GCC环境生成；只有将其下载并纳入仓库后，才作为Linux原始证据引用。
+两平台的全部语义计数一致，均产生65条运行时Trace和26条诊断Trace。该证据采用进程内类型化调用与合成DTC。它证明服务契约、权限边界、诊断状态机组合和清除重试语义，不证明远程UDS、DoIP、CAN-TP、SOME/IP诊断映射、物理ECU或诊断仪互操作。
