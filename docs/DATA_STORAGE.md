@@ -39,7 +39,7 @@
 
 ## 迁移接口
 
-`migrations/0001_postgresql_replay_metadata.sql`固定了计划中的PostgreSQL表和约束，可承载数据集、不可变对象以及带Lease/Fencing的任务状态。它是迁移契约，不是PostgreSQL运行证据。后续必须在真实PostgreSQL上执行并验证并发领取、故障接管和迟到提交，才能更新项目结论。
+`migrations/0001_postgresql_replay_metadata.sql`固定了PostgreSQL表和约束，可承载数据集、不可变对象以及带Lease/Fencing的任务状态。仓库已实现对应调度适配器和PostgreSQL 16 CI service-container任务；由于本机没有PostgreSQL或容器运行时，远端报告产生前仍不把它计为实机运行证据。详细状态见[PostgreSQL回放后端](POSTGRES_REPLAY.md)。
 
 本地复现：
 

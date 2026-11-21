@@ -48,7 +48,8 @@
 ### P2：数据闭环
 
 - [x] 本地Parquet/Zstandard列式数据与内容寻址对象：300行任务、1300行帧、300行终态，3个对象完成摘要、Schema、行数和内容读回验证；
-- [ ] MCAP、S3/MinIO对象存储与PostgreSQL实机元数据；当前migration仅为迁移契约；
+- [ ] MCAP、S3/MinIO对象存储与PostgreSQL实机元数据；PostgreSQL适配器和CI任务已完成，但尚无远端运行报告；
+- [x] PostgreSQL调度后端代码与CI service-container验收任务：服务端时钟、`SKIP LOCKED`、租约、心跳、Fencing和幂等提交；等待远端CI报告后再计入实机证据；
 - [x] 本地批量回放Worker、租约、心跳、fencing和幂等提交：4个Worker完成300任务，60组接管与迟到提交实验全部符合预期；
 - [ ] 将SQLite本地元数据原型迁移到PostgreSQL并验证多进程/多主机争抢与故障恢复；
 - [x] 300个冻结回放任务及版本化报告：200个独立源场景、2600次双阶段帧提交、300/300摘要一致、聚合SHA-256相同。

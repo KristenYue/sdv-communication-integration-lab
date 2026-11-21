@@ -1,8 +1,7 @@
--- Migration contract only. Execution against PostgreSQL is not yet claimed as evidence.
-BEGIN;
+-- Applied transactionally by scripts/run_postgres_replay.py.
 
 CREATE TABLE replay_datasets (
-    dataset_sha256 char(64) PRIMARY KEY,
+    dataset_sha256 char(64) PRIMARY KEY CHECK (dataset_sha256 ~ '^[0-9a-f]{64}$'),
     schema_version text NOT NULL,
     task_count integer NOT NULL CHECK (task_count >= 0),
     unique_source_scenarios integer NOT NULL CHECK (unique_source_scenarios >= 0),
@@ -10,7 +9,7 @@ CREATE TABLE replay_datasets (
 );
 
 CREATE TABLE replay_objects (
-    object_sha256 char(64) PRIMARY KEY,
+    object_sha256 char(64) PRIMARY KEY CHECK (object_sha256 ~ '^[0-9a-f]{64}$'),
     dataset_sha256 char(64) NOT NULL REFERENCES replay_datasets(dataset_sha256),
     logical_name text NOT NULL,
     object_uri text NOT NULL UNIQUE,
@@ -31,7 +30,7 @@ CREATE TABLE replay_jobs (
     lease_expires_at timestamptz,
     fencing_token bigint NOT NULL DEFAULT 0 CHECK (fencing_token >= 0),
     attempt integer NOT NULL DEFAULT 0 CHECK (attempt >= 0),
-    result_sha256 char(64),
+    result_sha256 char(64) CHECK (result_sha256 IS NULL OR result_sha256 ~ '^[0-9a-f]{64}$'),
     expected_match boolean,
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (dataset_sha256, task_id),
@@ -44,5 +43,3 @@ CREATE TABLE replay_jobs (
 
 CREATE INDEX replay_jobs_claim_idx
     ON replay_jobs (dataset_sha256, status, lease_expires_at, task_id);
-
-COMMIT;

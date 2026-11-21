@@ -62,6 +62,7 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | replay job store | Python + SQLite WAL | Atomic leases, heartbeat, fencing token and idempotent result commit |
 | replay workers | Python threads + C++ processes | Leased task execution through independent gateway processes |
 | replay object store | Python + Arrow + SQLite | Explicit Parquet schemas, content-addressed files, metadata and verified readback |
+| PostgreSQL replay store | Python + PostgreSQL | Server-clock leases, row-level claims, fencing and idempotent result commits |
 
 ## Idempotency boundary
 
@@ -80,6 +81,8 @@ The performance path uses a separate typed `vehicle.telemetry/Upload` method and
 The replay path materializes versioned JSONL tasks from the frozen four-node corpus. Baseline and replay phases run in separate fresh C++ gateway processes, preserve ordered Trace-linked results and terminal snapshots, and compare canonical per-task SHA-256 digests. The same tasks are normalized into explicit Parquet task, frame and expected-state tables, stored as local SHA-256-addressed objects and registered in SQLite metadata. This remains a local prototype rather than S3/PostgreSQL or a distributed data platform; see [REPLAY_PIPELINE.md](REPLAY_PIPELINE.md) and [DATA_STORAGE.md](DATA_STORAGE.md).
 
 The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monotonically increasing fencing tokens and idempotent result commits. Four worker threads each own a separate C++ gateway process. This demonstrates worker coordination on one host, not a PostgreSQL or multi-host control plane; see [REPLAY_SCHEDULER.md](REPLAY_SCHEDULER.md).
+
+The PostgreSQL adapter replaces SQLite's database-wide writer serialization with dataset-scoped `FOR UPDATE SKIP LOCKED` claims and database-server lease time. Its PostgreSQL 16 service-container experiment is defined in CI but has not run in the current local environment; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md). Even after that job passes, it remains a single database service and single CI host rather than a high-availability or multi-host deployment.
 
 ## Current signal ownership
 

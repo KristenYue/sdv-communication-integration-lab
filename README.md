@@ -110,7 +110,7 @@ SQLite和单机线程协调器只是可复现元数据原型，不代表PostgreS
 
 Windows本地实测生成3个不可变对象，总计21,257字节，三表读回全部一致；逻辑数据集SHA-256仍为`c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980`。原始报告见`benchmarks/windows-replay-storage-v1.json`，契约见[回放数据存储说明](docs/DATA_STORAGE.md)。
 
-该实现是本地内容寻址文件系统加SQLite元数据，不是云对象存储。仓库中的PostgreSQL migration仅固定迁移接口，尚未作为运行证据。
+该实现是本地内容寻址文件系统加SQLite元数据，不是云对象存储。仓库已增加PostgreSQL调度后端及PostgreSQL 16 CI集成任务，采用数据库服务端时钟、`FOR UPDATE SKIP LOCKED`和Fencing Token；由于本机没有PostgreSQL或容器运行时，远端报告产生前不作为实机数字。设计和状态见[PostgreSQL回放后端](docs/POSTGRES_REPLAY.md)。
 
 ## SOME/IP有界跨进程链路
 

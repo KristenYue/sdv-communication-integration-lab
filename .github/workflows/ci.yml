@@ -21,7 +21,7 @@ jobs:
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build --config Release
       - run: ctest --test-dir build -C Release --output-on-failure
-      - run: python -m pip install -e '.[dev,data]'
+      - run: python -m pip install -e '.[dev,data,postgres]'
       - run: python -m pytest
       - run: python -m ruff check python scripts
       - name: Run bounded SOME/IP loopback on Linux
@@ -105,4 +105,41 @@ jobs:
       - run: cmake -S . -B build-sanitize -DCMAKE_BUILD_TYPE=Debug -DSDV_ENABLE_SANITIZERS=ON
       - run: cmake --build build-sanitize
       - run: ctest --test-dir build-sanitize --output-on-failure
+  postgres-replay-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sdv_replay
+          POSTGRES_USER: sdv
+          POSTGRES_PASSWORD: sdv-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sdv -d sdv_replay"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release
+      - run: python -m pip install -e '.[dev,data,postgres]'
+      - name: Run PostgreSQL replay workers and lease controls
+        run: >-
+          python scripts/run_postgres_replay.py
+          --dsn "postgresql://sdv:sdv-ci-password@localhost:5432/sdv_replay"
+          --gateway-bin build/sdv_gateway_cli
+          --output artifacts/postgres-replay.json
+          --workers 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-replay-integration
+          path: artifacts/
 

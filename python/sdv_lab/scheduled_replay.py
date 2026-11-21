@@ -8,11 +8,30 @@ import threading
 import time
 from collections import Counter
 from pathlib import Path
+from typing import Protocol
 
 from .replay_runner import _canonical_sha256
-from .replay_scheduler import ReplayJobStore
+from .replay_scheduler import ReplayJobStore, ReplayLease
 from .replay_tasks import ReplayTask
 from .system_runner import FRESHNESS_FIELDS, _value_matches
+
+
+class ReplayStore(Protocol):
+    def seed(self, task_ids: list[str], now_ms: int = 0) -> None: ...
+
+    def acquire_next(
+        self, worker_id: str, now_ms: int, lease_ms: int
+    ) -> ReplayLease | None: ...
+
+    def heartbeat(self, lease: ReplayLease, now_ms: int, lease_ms: int) -> bool: ...
+
+    def commit(
+        self, lease: ReplayLease, result_sha256: str, expected_match: bool, now_ms: int
+    ) -> str: ...
+
+    def counts(self) -> dict[str, int]: ...
+
+    def completed_results(self) -> list[tuple[str, str, bool]]: ...
 
 
 def _now_ms() -> int:
@@ -90,6 +109,15 @@ def execute_scheduled_replay(
     worker_count: int = 4,
 ) -> dict:
     store = ReplayJobStore(database)
+    return execute_scheduled_replay_with_store(executable, tasks, store, worker_count)
+
+
+def execute_scheduled_replay_with_store(
+    executable: str | Path,
+    tasks: list[ReplayTask],
+    store: ReplayStore,
+    worker_count: int = 4,
+) -> dict:
     store.seed([task.task_id for task in tasks], _now_ms())
     tasks_by_id = {task.task_id: task for task in tasks}
     statistics: Counter[str] = Counter()

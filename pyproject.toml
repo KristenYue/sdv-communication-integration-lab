@@ -12,6 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.8"]
 data = ["pyarrow>=18.0"]
+postgres = ["psycopg[binary]>=3.2"]
 
 [tool.setuptools.packages.find]
 where = ["python"]
