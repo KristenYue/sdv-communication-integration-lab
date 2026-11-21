@@ -1,0 +1,18 @@
+{
+  "schema_version": "sdv-diagnostic-service-evidence-v1",
+  "data_boundary": "in_process_typed_vehicle_service_runtime_and_synthetic_dtcs;not_remote_uds_doip_or_physical_ecu_evidence",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "discovered_methods": 5,
+  "permission_rejections": 50,
+  "dtcs_read": 10,
+  "default_clear_code": "SESSION_DENIED",
+  "session_accepted": true,
+  "seed_returned": true,
+  "key_accepted": true,
+  "clear_accepted": true,
+  "clear_replay_accepted": true,
+  "idempotent_replays": 1,
+  "active_after_clear": 0,
+  "runtime_trace_events": 65,
+  "diagnostic_trace_events": 26
+}

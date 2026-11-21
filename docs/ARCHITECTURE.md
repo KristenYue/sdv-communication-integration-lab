@@ -1,6 +1,6 @@
 # Vehicle service runtime architecture and evidence boundaries
 
-The platform is organized around production-code ownership rather than test execution. The C++ communication gateway and the upcoming vehicle-service runtime are the product under development. Frozen scenarios, fault injection and replay are evidence mechanisms around that product. AI or diagnostic agents may consume the service API later, but they do not define the core architecture.
+The platform is organized around production-code ownership rather than test execution. The C++ communication gateway, vehicle-service runtime and diagnostic state manager are the product under development. Frozen scenarios, fault injection and replay are evidence mechanisms around that product. AI or diagnostic agents may consume the service API later, but they do not define the core architecture.
 
 ## Current executable paths
 
@@ -32,14 +32,16 @@ C++ VehicleGateway --> typed vehicle snapshot --> C++ VehicleServiceRuntime
                                                     +--> permission admission
                                                     +--> deadline / cancellation semantics
                                                     +--> request and trace events
-                                                    +--> diagnostic, cloud or optional AI consumer
+                                                    +--> vehicle.state adapter
+                                                    +--> vehicle.diagnostics adapter --> DiagnosticManager
+                                                    +--> cloud or optional AI consumer
 ```
 
 Path A exists to exercise process lifecycle, multiple signal owners, restarts, correlation IDs and deterministic scenario assertions on both Windows and Linux. Its queue is orchestration infrastructure, not an automotive network.
 
 Path B exists to prove that the C++ data plane can receive native Linux CAN frames. `vcan0` is a kernel virtual CAN interface, not a physical CAN controller, vehicle harness or production ECU.
 
-Path C is the product-facing service abstraction. Its first adapter is read-only and in-process so the request contract and failure semantics can be established before adding a network transport. A timeout before dispatch means the handler did not run. A timeout or cancellation observed after dispatch returns `COMPLETION_UNKNOWN` because the runtime cannot honestly promise rollback of handler side effects.
+Path C is the product-facing service abstraction. Its adapters expose read-only vehicle state and the typed diagnostic lifecycle. A timeout before dispatch means the handler did not run. A timeout or cancellation observed after dispatch returns `COMPLETION_UNKNOWN` because the runtime cannot honestly promise rollback of handler side effects. Diagnostic Session/Seed/Key exchanges require a fresh Request ID for each logical exchange; an identical retry may reuse that ID.
 
 Path D carries that read-only method across two C++ processes using a bounded SOME/IP header and localhost UDP. The server maps Service ID `0x1234` and Method ID `0x0001` into the same typed runtime call. This proves cross-process request correlation and dispatch, not Service Discovery or production-stack interoperability.
 
@@ -52,6 +54,7 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | `sdv_socketcan_gateway` | C++20/Linux | Native `PF_CAN`/`CAN_RAW` receive path into the same gateway core |
 | `VehicleServiceRuntime` | C++20 | Service registry, typed dispatch, permissions, deadlines, cancellation semantics and trace |
 | `vehicle.state` adapter | C++20 | Read-only service boundary over the gateway snapshot |
+| `vehicle.diagnostics` adapter | C++20 | Typed session, security access, DTC read and authorized clear boundary over `DiagnosticManager` |
 | bounded SOME/IP codec | C++20 | Big-endian base-header encoding/decoding and malformed-message rejection |
 | SOME/IP UDP server/client | C++20 | Cross-process localhost request/response into the vehicle-service runtime |
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
@@ -101,6 +104,7 @@ The PostgreSQL adapter replaces SQLite's database-wide writer serialization with
 - AUTOSAR compliance;
 - production SOME/IP or DDS interoperability;
 - cross-process service discovery or transport for the vehicle-service runtime;
+- remote UDS/DoIP/CAN-TP or SOME/IP mapping for `vehicle.diagnostics`;
 - power-loss durability, cross-process concurrent arbitration or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;

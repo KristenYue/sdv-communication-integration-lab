@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdv/diagnostic_manager.hpp"
 #include "sdv/types.hpp"
 
 #include <cstdint>
@@ -43,11 +44,39 @@ struct TelemetryUploadResult {
     std::size_t accepted_bytes{0};
 };
 
+struct StartDiagnosticSessionRequest {
+    DiagnosticSession session{DiagnosticSession::Default};
+};
+
+struct RequestDiagnosticSeedRequest {};
+
+struct SubmitDiagnosticKeyRequest {
+    std::uint32_t seed{0};
+    std::uint32_t key{0};
+};
+
+struct ReadDtcInformationRequest {
+    bool active_only{true};
+};
+
+struct ClearDiagnosticInformationRequest {};
+
+struct DiagnosticSeedResult {
+    std::uint32_t seed{0};
+};
+
+struct DiagnosticDtcListResult {
+    std::vector<DiagnosticTroubleCode> dtcs;
+};
+
 using ServiceRequestPayload =
     std::variant<std::monostate, GetVehicleSnapshotRequest, SetDoorLocksRequest,
-                 TelemetryUploadRequest>;
+                 TelemetryUploadRequest, StartDiagnosticSessionRequest,
+                 RequestDiagnosticSeedRequest, SubmitDiagnosticKeyRequest,
+                 ReadDtcInformationRequest, ClearDiagnosticInformationRequest>;
 using ServiceResponsePayload =
-    std::variant<std::monostate, VehicleSnapshot, DoorLockResult, TelemetryUploadResult>;
+    std::variant<std::monostate, VehicleSnapshot, DoorLockResult, TelemetryUploadResult,
+                 DiagnosticSeedResult, DiagnosticDtcListResult>;
 
 struct ServiceMethodDescriptor {
     std::string name;
@@ -148,5 +177,8 @@ private:
 
 bool register_vehicle_state_service(VehicleServiceRuntime& runtime,
                                     const VehicleGateway& gateway);
+bool register_vehicle_diagnostic_service(VehicleServiceRuntime& runtime,
+                                         DiagnosticManager& diagnostics,
+                                         VehicleServiceRuntime::Clock clock);
 
 }  // namespace sdv

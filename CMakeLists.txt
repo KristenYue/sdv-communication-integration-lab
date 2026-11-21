@@ -26,6 +26,7 @@ add_library(sdv_core
   cpp/src/someip.cpp
   cpp/src/someip_udp.cpp
   cpp/src/vehicle_gateway.cpp
+  cpp/src/vehicle_diagnostic_service.cpp
   cpp/src/vehicle_someip_adapter.cpp
   cpp/src/vehicle_service_runtime.cpp
 )
@@ -70,6 +71,9 @@ endif()
 
 add_executable(sdv_diagnostic_evidence cpp/src/diagnostic_evidence.cpp)
 target_link_libraries(sdv_diagnostic_evidence PRIVATE sdv_core)
+
+add_executable(sdv_diagnostic_service_evidence cpp/src/diagnostic_service_evidence.cpp)
+target_link_libraries(sdv_diagnostic_service_evidence PRIVATE sdv_core)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)

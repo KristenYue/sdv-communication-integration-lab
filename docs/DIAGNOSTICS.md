@@ -19,6 +19,18 @@ DiagnosticManager
   └─ Trace事件
 ```
 
+诊断核心已经通过`vehicle.diagnostics`适配器接入`VehicleServiceRuntime`。上层调用不直接持有`DiagnosticManager`，而是经由类型化服务契约、Principal、Permission、Request ID、Deadline与统一Trace进入以下方法：
+
+| 方法 | 所需权限 | 语义 |
+|---|---|---|
+| `StartSession` | `diagnostic.session` | 为指定客户端启动Default或Extended Session |
+| `RequestSecuritySeed` | `diagnostic.security` | 在会话状态机中签发一次挑战 |
+| `SubmitSecurityKey` | `diagnostic.security` | 校验挑战绑定、错误计数与Lockout |
+| `ReadDTCInformation` | `diagnostic.read` | 返回类型化Active DTC记录 |
+| `ClearDiagnosticInformation` | `diagnostic.clear` | 执行受会话与解锁状态保护的清除 |
+
+服务端时间由运行时适配器注入，客户端不能用请求载荷伪造会话时间。运行时先执行服务发现与权限准入，再进入诊断状态机；错误`std::variant`载荷被拒绝。所有协议交换应使用唯一Request ID；相同ID仅用于对同一个逻辑调用进行重试。尤其是Session、Seed与Key请求不得把旧Request ID复用于新的协议交换。`ClearDiagnosticInformation`的相同请求重试会返回已缓存终态，不会再次执行清除。
+
 ## DTC生命周期
 
 - DTC必须预注册24位Code、名称和Severity，未知监控器不能动态写入状态；
@@ -58,3 +70,18 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 - 全流程产生166条诊断Trace事件。
 
 两平台得到相同的状态计数与166条Trace；平台字段保留各自原始运行环境。
+
+## 类型化服务接入证据
+
+`benchmarks/windows-diagnostic-service-evidence-v1.json`记录当前Windows本地接入证据：
+
+- 服务发现返回5个诊断方法；
+- 50次缺少`diagnostic.read`权限的读取全部在运行时拒绝；
+- 授权读取返回10个Confirmed DTC；
+- Default Session中的清除返回`SESSION_DENIED`；
+- Start Session、Request Seed、Submit Key与Clear全部经由类型化运行时完成；
+- 同一Clear请求重试产生1次`IDEMPOTENT_REPLAY`，没有第二次进入诊断清除；
+- 清除后Active DTC为0；
+- 运行时与诊断核心分别产生65和26条Trace事件。
+
+该证据采用进程内类型化调用与合成DTC。它证明服务契约、权限边界、诊断状态机组合和清除重试语义，不证明远程UDS、DoIP、CAN-TP、SOME/IP诊断映射、物理ECU或诊断仪互操作。Linux对应报告由CI在原生GCC环境生成；只有将其下载并纳入仓库后，才作为Linux原始证据引用。

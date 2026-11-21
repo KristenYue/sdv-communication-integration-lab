@@ -78,9 +78,13 @@ Windows本地实测：32个线程同时提交同一状态变更，32个调用全
 
 诊断访问采用有界的Default/Extended Session、5秒会话超时、Seed/Key挑战和三次错误Key后的10秒Lockout。清除DTC必须处于Extended Session且已解锁，清除后撤销权限。该Seed/Key仅是状态机测试算法，不是量产密码学。
 
+诊断核心已经接入类型化`vehicle.diagnostics`服务，提供`StartSession`、`RequestSecuritySeed`、`SubmitSecurityKey`、`ReadDTCInformation`和`ClearDiagnosticInformation`五个方法。服务运行时统一执行Principal/Permission、Request ID、Deadline、载荷类型与Trace边界；客户端不能通过载荷控制服务端会话时钟。相同Clear请求的重试返回缓存终态，不会再次清除。每次新的Session/Seed/Key协议交换必须使用新的Request ID，仅相同逻辑调用的重试可复用ID。
+
 Windows与Linux证据均包含20个DTC、40个跨周期失败报告和20次同周期重复报告：20/20进入Confirmed、20/20 Freeze Frame保留，重启后恢复20/20；30次未授权清除全部拒绝，20组错误Key全部进入Lockout；授权清除后再次重启Active DTC为0，损坏Journal失败关闭，全流程产生166条Trace。原始报告见`benchmarks/windows-diagnostic-evidence-v1.json`和`benchmarks/linux-diagnostic-evidence-v1.json`，完整语义与边界见[诊断说明](docs/DIAGNOSTICS.md)。
 
-这是UDS风格的诊断状态核心，不是完整ISO 14229实现；当前没有CAN-TP、DoIP、标准Service ID/NRC一致性或真实诊断仪互操作。
+Windows类型化服务接入证据进一步覆盖5个可发现方法、50次权限拒绝、10个DTC授权读取、默认会话清除拒绝、会话/解锁/清除完整链路，以及相同Clear请求的一次幂等回放；清除后Active DTC为0。原始报告见`benchmarks/windows-diagnostic-service-evidence-v1.json`。
+
+这是UDS风格的诊断状态核心和进程内类型化服务接口，不是完整ISO 14229实现；当前没有远程诊断SOME/IP映射、CAN-TP、DoIP、标准Service ID/NRC一致性或真实诊断仪互操作。
 
 ### 网络结果未知与重启重试
 

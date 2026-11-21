@@ -95,13 +95,26 @@ std::string VehicleServiceRuntime::fingerprint(const ServiceRequest& request) {
     } else if (const auto* command = std::get_if<SetDoorLocksRequest>(&request.payload)) {
         output << "door-locks:" << static_cast<unsigned int>(command->door_mask) << ':'
                << (command->lock ? '1' : '0');
-    } else {
-        const auto& telemetry = std::get<TelemetryUploadRequest>(request.payload);
-        output << "telemetry:" << telemetry.node_id << ':' << telemetry.payload.size() << ':';
-        for (const auto byte : telemetry.payload) {
+    } else if (const auto* telemetry = std::get_if<TelemetryUploadRequest>(&request.payload)) {
+        output << "telemetry:" << telemetry->node_id << ':' << telemetry->payload.size() << ':';
+        for (const auto byte : telemetry->payload) {
             output << static_cast<char>("0123456789abcdef"[byte >> 4U])
                    << static_cast<char>("0123456789abcdef"[byte & 0x0FU]);
         }
+    } else if (const auto* session =
+                   std::get_if<StartDiagnosticSessionRequest>(&request.payload)) {
+        output << "diagnostic-session:"
+               << (session->session == DiagnosticSession::Extended ? "extended" : "default");
+    } else if (std::holds_alternative<RequestDiagnosticSeedRequest>(request.payload)) {
+        output << "diagnostic-seed";
+    } else if (const auto* key =
+                   std::get_if<SubmitDiagnosticKeyRequest>(&request.payload)) {
+        output << "diagnostic-key:" << key->seed << ':' << key->key;
+    } else if (const auto* read =
+                   std::get_if<ReadDtcInformationRequest>(&request.payload)) {
+        output << "diagnostic-read:" << (read->active_only ? '1' : '0');
+    } else {
+        output << "diagnostic-clear";
     }
     return output.str();
 }

@@ -4,7 +4,9 @@
 #include <array>
 #include <cstdlib>
 #include <iostream>
+#include <set>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -172,6 +174,103 @@ void test_idempotent_replay_and_conflict() {
     check(executions == 1, "conflicting retry does not reach handler");
 }
 
+sdv::ServiceRequest diagnostic_request(std::string id, std::string method,
+                                       std::set<std::string> permissions,
+                                       sdv::ServiceRequestPayload payload) {
+    return sdv::ServiceRequest{std::move(id),
+                               "diagnostic-trace",
+                               "diagnostic-tool",
+                               "vehicle.diagnostics",
+                               std::move(method),
+                               2'000,
+                               std::move(permissions),
+                               std::move(payload)};
+}
+
+void test_typed_diagnostic_service_flow() {
+    std::int64_t now = 1'000;
+    sdv::DiagnosticManager diagnostics;
+    check(diagnostics.register_dtc(0xC10001U, "TPMS_LOW", 2U),
+          "diagnostic service DTC registered");
+    check(diagnostics.begin_operation_cycle(1U, 100, "cycle-1").accepted,
+          "diagnostic service first cycle started");
+    check(diagnostics.report_test_result(0xC10001U, true, sdv::VehicleSnapshot{}, 110,
+                                         "failure-1")
+              .accepted,
+          "diagnostic service first failure reported");
+    check(diagnostics.begin_operation_cycle(2U, 200, "cycle-2").accepted,
+          "diagnostic service second cycle started");
+    check(diagnostics.report_test_result(0xC10001U, true, sdv::VehicleSnapshot{}, 210,
+                                         "failure-2")
+              .accepted,
+          "diagnostic service second failure reported");
+
+    sdv::VehicleServiceRuntime runtime([&now] { return now; });
+    check(sdv::register_vehicle_diagnostic_service(runtime, diagnostics, [&now] { return now; }),
+          "typed diagnostic service registered");
+    const auto services = runtime.discover();
+    check(services.size() == 1U && services.front().methods.size() == 5U,
+          "five diagnostic methods discovered");
+
+    const auto denied = runtime.invoke(diagnostic_request(
+        "diag-read-denied", "ReadDTCInformation", {}, sdv::ReadDtcInformationRequest{true}));
+    check(denied.code == "PERMISSION_DENIED", "diagnostic read permission enforced");
+
+    const auto read = runtime.invoke(diagnostic_request(
+        "diag-read", "ReadDTCInformation", {"diagnostic.read"},
+        sdv::ReadDtcInformationRequest{true}));
+    const auto* list = std::get_if<sdv::DiagnosticDtcListResult>(&read.payload);
+    check(read.accepted && list != nullptr && list->dtcs.size() == 1U &&
+              list->dtcs.front().confirmed,
+          "typed diagnostic read returns confirmed DTC");
+
+    const auto denied_clear = runtime.invoke(diagnostic_request(
+        "diag-clear-denied", "ClearDiagnosticInformation", {"diagnostic.clear"},
+        sdv::ClearDiagnosticInformationRequest{}));
+    check(denied_clear.code == "SESSION_DENIED",
+          "clear requires extended diagnostic session");
+
+    const auto session = runtime.invoke(diagnostic_request(
+        "diag-session", "StartSession", {"diagnostic.session"},
+        sdv::StartDiagnosticSessionRequest{sdv::DiagnosticSession::Extended}));
+    check(session.accepted, "extended session entered through runtime");
+    const auto seed_response = runtime.invoke(diagnostic_request(
+        "diag-seed", "RequestSecuritySeed", {"diagnostic.security"},
+        sdv::RequestDiagnosticSeedRequest{}));
+    const auto* seed = std::get_if<sdv::DiagnosticSeedResult>(&seed_response.payload);
+    check(seed_response.accepted && seed != nullptr, "typed security seed returned");
+    if (seed == nullptr) {
+        return;
+    }
+    const auto key = runtime.invoke(diagnostic_request(
+        "diag-key", "SubmitSecurityKey", {"diagnostic.security"},
+        sdv::SubmitDiagnosticKeyRequest{seed->seed,
+                                        sdv::DiagnosticManager::calculate_test_key(seed->seed)}));
+    check(key.accepted, "security key accepted through runtime");
+
+    auto clear_request = diagnostic_request(
+        "diag-clear", "ClearDiagnosticInformation", {"diagnostic.clear"},
+        sdv::ClearDiagnosticInformationRequest{});
+    const auto cleared = runtime.invoke(clear_request);
+    check(cleared.accepted && diagnostics.active_dtcs().empty(),
+          "authorized clear reaches diagnostic manager");
+    clear_request.trace_id = "diagnostic-clear-retry";
+    check(runtime.invoke(clear_request).accepted,
+          "identical clear retry replays terminal response");
+
+    const auto empty = runtime.invoke(diagnostic_request(
+        "diag-read-empty", "ReadDTCInformation", {"diagnostic.read"},
+        sdv::ReadDtcInformationRequest{true}));
+    const auto* empty_list = std::get_if<sdv::DiagnosticDtcListResult>(&empty.payload);
+    check(empty_list != nullptr && empty_list->dtcs.empty(),
+          "post-clear diagnostic read returns no active DTCs");
+
+    const auto bad_payload = runtime.invoke(diagnostic_request(
+        "diag-bad-payload", "ReadDTCInformation", {"diagnostic.read"},
+        sdv::ClearDiagnosticInformationRequest{}));
+    check(bad_payload.code == "INVALID_PAYLOAD", "diagnostic payload type enforced");
+}
+
 }  // namespace
 
 int main() {
@@ -179,6 +278,7 @@ int main() {
     test_admission_guards();
     test_post_dispatch_result_uncertainty();
     test_idempotent_replay_and_conflict();
+    test_typed_diagnostic_service_flow();
     if (failures == 0) {
         std::cout << "All vehicle service runtime tests passed\n";
         return EXIT_SUCCESS;

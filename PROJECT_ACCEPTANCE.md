@@ -43,6 +43,7 @@
 - [x] 并发In-flight去重与背压：32个相同调用仅执行1次、16个冲突调用全部拒绝；容量满时分别验证`QUEUE_FULL`和`QUEUE_TIMEOUT`；
 - [x] 网络结果未知组合实验：30次服务端执行后丢响应、30次客户端超时；服务重启后重放30个响应、Handler执行0次、重复最终动作0次；
 - [x] 有界诊断核心：Operation Cycle、Pending/Confirmed/Aging、首次Freeze Frame、Extended Session、Security Lockout、授权清除与CRC Journal恢复；20个DTC重启恢复和清除证据全部通过；
+- [x] 诊断核心接入类型化`vehicle.diagnostics`服务：5个方法经过服务发现、Principal/Permission、Deadline、Request ID与Trace边界；50次越权读取全部拒绝，授权完成会话/解锁/清除，相同Clear重试由运行时幂等回放；当前为进程内接入，不冒充远程UDS/DoIP；
 - [x] 3种频率 × 3种载荷 × 3种节点规模的27格Release性能矩阵，报告吞吐、p50/p95/p99、进程CPU与常驻内存；
 - [x] 回放数据闭环与Linux真实`vcan0`远端证据；当前Journal仍不声称断电级持久性。
 
