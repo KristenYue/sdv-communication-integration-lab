@@ -63,7 +63,9 @@ try {
         -Output "$runtimeDirectory\sdv_service_runtime_tests.exe" -Run
     Invoke-NativeBuild -Sources @('cpp\tests\test_someip.cpp') `
         -Output "$runtimeDirectory\sdv_someip_tests.exe" -Run
-    Invoke-NativeBuild -Sources @('cpp\tests\test_vehicle_someip_adapter.cpp') `
+    Invoke-NativeBuild `
+        -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\vehicle_diagnostic_service.cpp',
+                   'cpp\tests\test_vehicle_someip_adapter.cpp') `
         -Output "$runtimeDirectory\sdv_vehicle_someip_adapter_tests.exe" -Run
     Invoke-NativeBuild `
         -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\tests\test_diagnostic_manager.cpp') `
@@ -74,7 +76,6 @@ try {
         -Output "$runtimeDirectory\sdv_service_runtime_demo.exe" -Run
     $targets = @(
         @('cpp\src\gateway_cli.cpp', 'sdv_gateway_cli.exe'),
-        @('cpp\src\someip_vehicle_server.cpp', 'sdv_someip_vehicle_server.exe'),
         @('cpp\src\someip_vehicle_client.cpp', 'sdv_someip_vehicle_client.exe'),
         @('cpp\src\someip_body_client.cpp', 'sdv_someip_body_client.exe'),
         @('cpp\src\idempotency_evidence.cpp', 'sdv_idempotency_evidence.exe'),
@@ -84,6 +85,13 @@ try {
     foreach ($target in $targets) {
         Invoke-NativeBuild -Sources @($target[0]) -Output "$runtimeDirectory\$($target[1])"
     }
+    Invoke-NativeBuild `
+        -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\vehicle_diagnostic_service.cpp',
+                   'cpp\src\someip_vehicle_server.cpp') `
+        -Output "$runtimeDirectory\sdv_someip_vehicle_server.exe"
+    Invoke-NativeBuild `
+        -Sources @('cpp\src\diagnostic_manager.cpp', 'cpp\src\someip_diagnostic_client.cpp') `
+        -Output "$runtimeDirectory\sdv_someip_diagnostic_client.exe"
     Invoke-NativeBuild -Sources @('cpp\src\performance_matrix.cpp') `
         -Output "$runtimeDirectory\sdv_performance_matrix.exe" -Options @('/O2')
     Invoke-NativeBuild `

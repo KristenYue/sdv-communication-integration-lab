@@ -36,6 +36,36 @@ bool seed_gateway(sdv::VehicleGateway& gateway) {
                .accepted;
 }
 
+bool seed_diagnostics(sdv::DiagnosticManager& diagnostics) {
+    constexpr int kDtcCount = 10;
+    for (int index = 0; index < kDtcCount; ++index) {
+        if (!diagnostics.register_dtc(0xC40001U + static_cast<std::uint32_t>(index),
+                                      "REMOTE_DTC_" + std::to_string(index + 1), 2U)) {
+            return false;
+        }
+    }
+    for (std::uint64_t cycle = 1U; cycle <= 2U; ++cycle) {
+        if (!diagnostics
+                 .begin_operation_cycle(cycle, static_cast<std::int64_t>(cycle * 100U),
+                                        "remote-cycle")
+                 .accepted) {
+            return false;
+        }
+        for (int index = 0; index < kDtcCount; ++index) {
+            if (!diagnostics
+                     .report_test_result(
+                         0xC40001U + static_cast<std::uint32_t>(index), true,
+                         sdv::VehicleSnapshot{},
+                         static_cast<std::int64_t>(cycle * 100U + index + 1U),
+                         "remote-failure")
+                     .accepted) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -59,6 +89,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     int body_handler_executions = 0;
+    sdv::DiagnosticManager diagnostics;
     if (mode == "body-drop" || mode == "body-replay") {
         const sdv::ServiceDescriptor body{"vehicle.body", "1.0.0",
                                           {{"SetDoorLocks", "body.write", true}}};
@@ -72,6 +103,13 @@ int main(int argc, char** argv) {
                         sdv::DoorLockResult{command.door_mask, command.lock}};
                 })) {
             std::cerr << "failed to register vehicle body service\n";
+            return EXIT_FAILURE;
+        }
+    }
+    if (mode == "diagnostic") {
+        if (!seed_diagnostics(diagnostics) ||
+            !sdv::register_vehicle_diagnostic_service(runtime, diagnostics, clock)) {
+            std::cerr << "failed to initialize vehicle diagnostic service\n";
             return EXIT_FAILURE;
         }
     }
@@ -95,6 +133,8 @@ int main(int argc, char** argv) {
     }
     std::cout << "SERVED requests=" << request_count
               << " body_handler_executions=" << body_handler_executions
-              << " runtime_trace_events=" << runtime.trace_snapshot().size() << '\n';
+              << " runtime_trace_events=" << runtime.trace_snapshot().size()
+              << " diagnostic_trace_events=" << diagnostics.trace_snapshot().size()
+              << " active_dtcs=" << diagnostics.active_dtcs().size() << '\n';
     return EXIT_SUCCESS;
 }

@@ -45,6 +45,8 @@ Path C is the product-facing service abstraction. Its adapters expose read-only 
 
 Path D carries that read-only method across two C++ processes using a bounded SOME/IP header and localhost UDP. The server maps Service ID `0x1234` and Method ID `0x0001` into the same typed runtime call. This proves cross-process request correlation and dispatch, not Service Discovery or production-stack interoperability.
 
+Path E maps `vehicle.diagnostics` to project-bounded SOME/IP Service ID `0x1236` and five Method IDs. A separate C++ client performs DTC read, session transition, seed/key and authorized clear through localhost UDP. Transport failures use SOME/IP return codes; accepted transport responses carry a one-byte diagnostic application status. DTC records use a fixed nine-byte representation (24-bit code, severity, status bits and occurrence count), capped at 255 records per response. This is a deliberately bounded project wire contract, not AUTOSAR serialization, ISO 14229, DoIP or CAN-TP.
+
 ## Component ownership
 
 | Component | Language | Responsibility |
@@ -57,6 +59,7 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | `vehicle.diagnostics` adapter | C++20 | Typed session, security access, DTC read and authorized clear boundary over `DiagnosticManager` |
 | bounded SOME/IP codec | C++20 | Big-endian base-header encoding/decoding and malformed-message rejection |
 | SOME/IP UDP server/client | C++20 | Cross-process localhost request/response into the vehicle-service runtime |
+| diagnostic SOME/IP adapter/client | C++20 | Five-method bounded wire mapping, application status and fixed DTC records over localhost UDP |
 | frozen scenario controller | Python | Versioned input generation, expected results, hashes and reports |
 | virtual ECU workers | Python processes | VCU/TPMS/BCM/T-Box signal ownership and restart generations |
 | DBC subset decoder | Python | Independent contract check for the project-supported message subset |
@@ -104,7 +107,7 @@ The PostgreSQL adapter replaces SQLite's database-wide writer serialization with
 - AUTOSAR compliance;
 - production SOME/IP or DDS interoperability;
 - cross-process service discovery or transport for the vehicle-service runtime;
-- remote UDS/DoIP/CAN-TP or SOME/IP mapping for `vehicle.diagnostics`;
+- AUTOSAR SOME/IP interoperability or remote UDS/DoIP/CAN-TP for `vehicle.diagnostics`;
 - power-loss durability, cross-process concurrent arbitration or real-time scheduling;
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
