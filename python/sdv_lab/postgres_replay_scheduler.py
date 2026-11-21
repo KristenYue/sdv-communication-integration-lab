@@ -111,14 +111,15 @@ class PostgresReplayJobStore:
             }
             if dataset != expected:
                 raise RuntimeError("dataset identity conflicts with existing PostgreSQL metadata")
-            connection.executemany(
-                """
-                INSERT INTO replay_jobs(dataset_sha256, task_id)
-                VALUES (%s, %s)
-                ON CONFLICT (dataset_sha256, task_id) DO NOTHING
-                """,
-                [(self.dataset_sha256, task_id) for task_id in task_ids],
-            )
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO replay_jobs(dataset_sha256, task_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT (dataset_sha256, task_id) DO NOTHING
+                    """,
+                    [(self.dataset_sha256, task_id) for task_id in task_ids],
+                )
             stored_task_ids = [
                 str(row["task_id"])
                 for row in connection.execute(

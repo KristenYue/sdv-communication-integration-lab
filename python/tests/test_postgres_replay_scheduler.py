@@ -23,3 +23,60 @@ def test_postgres_store_rejects_invalid_lease_inputs(worker_id: str, lease_ms: i
     store = PostgresReplayJobStore("postgresql://unused", "0" * 64, "v1", 1)
     with pytest.raises(ValueError):
         store._validate_lease(worker_id, lease_ms)
+
+
+def test_seed_uses_cursor_batch_and_verifies_inventory(monkeypatch) -> None:
+    class Result:
+        def __init__(self, one=None, many=None):
+            self.one = one
+            self.many = many
+
+        def fetchone(self):
+            return self.one
+
+        def fetchall(self):
+            return self.many
+
+    class Cursor:
+        def __init__(self):
+            self.rows = None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def executemany(self, _sql, rows):
+            self.rows = rows
+
+    class Connection:
+        def __init__(self):
+            self.batch_cursor = Cursor()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def cursor(self):
+            return self.batch_cursor
+
+        def execute(self, sql, _parameters):
+            if "SELECT schema_version" in sql:
+                return Result(
+                    one={"schema_version": "v1", "task_count": 2, "unique_source_scenarios": 2}
+                )
+            if "SELECT task_id" in sql:
+                return Result(many=[{"task_id": "task-a"}, {"task_id": "task-b"}])
+            return Result()
+
+    connection = Connection()
+    store = PostgresReplayJobStore("postgresql://unused", "0" * 64, "v1", 2)
+    monkeypatch.setattr(store, "_connect", lambda: connection)
+    store.seed(["task-b", "task-a"])
+    assert connection.batch_cursor.rows == [
+        ("0" * 64, "task-b"),
+        ("0" * 64, "task-a"),
+    ]
