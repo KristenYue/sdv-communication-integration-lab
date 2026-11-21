@@ -92,6 +92,6 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 
 传输层畸形载荷、未知服务和未知方法使用SOME/IP错误响应；诊断状态机拒绝使用成功传输响应中的一字节应用状态，避免把`SESSION_DENIED`误报成网络失败。DTC响应采用固定九字节记录：24位DTC Code、Severity、Failed/Pending/Confirmed状态位和32位Occurrence Count；名称、Freeze Frame和内部Trace不进入该有界线协议。单次最多255条记录。
 
-`benchmarks/windows-diagnostic-someip-evidence-v1.json`记录两个独立Windows C++进程的7次请求：初始读取10个Confirmed DTC且固定字段正确；Default Session清除返回`SESSION_DENIED`；Extended Session、Seed、Key和授权清除成功；末态读取返回0个Active DTC。服务端产生14条运行时Trace和26条诊断Trace。
+`benchmarks/windows-diagnostic-someip-evidence-v1.json`与`benchmarks/linux-diagnostic-someip-evidence-v1.json`记录Windows和GitHub Ubuntu Runner上两个独立C++进程的7次请求：初始读取10个Confirmed DTC且固定字段正确；Default Session清除返回`SESSION_DENIED`；Extended Session、Seed、Key和授权清除成功；末态读取返回0个Active DTC。两平台均产生14条运行时Trace和26条诊断Trace，除运行环境与监听端口字段外语义结果一致。
 
 该链路证明项目协议的跨进程请求关联、序列化边界和诊断状态机组合；它仍不是AUTOSAR SOME/IP一致性、Service Discovery、UDS Service/NRC、DoIP、CAN-TP、物理ECU或真实诊断仪互操作证据。

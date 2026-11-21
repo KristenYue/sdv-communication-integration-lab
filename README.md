@@ -84,7 +84,7 @@ Windows与Linux证据均包含20个DTC、40个跨周期失败报告和20次同�
 
 Windows与Linux类型化服务接入证据进一步覆盖5个可发现方法、50次权限拒绝、10个DTC授权读取、默认会话清除拒绝、会话/解锁/清除完整链路，以及相同Clear请求的一次幂等回放；清除后Active DTC为0，两平台分别产生65条运行时Trace和26条诊断Trace。原始报告见`benchmarks/windows-diagnostic-service-evidence-v1.json`与`benchmarks/linux-diagnostic-service-evidence-v1.json`。
 
-诊断服务还映射到有界SOME/IP Service ID `0x1236`和五个Method ID。独立C++客户端/服务端经localhost UDP执行7次调用：读取10个Confirmed DTC、验证默认会话清除拒绝、完成Extended Session与Seed/Key、授权清除并确认末态0个Active DTC。线协议将传输错误与诊断应用状态分层，DTC使用固定九字节记录。Windows原始报告见`benchmarks/windows-diagnostic-someip-evidence-v1.json`。
+诊断服务还映射到有界SOME/IP Service ID `0x1236`和五个Method ID。独立C++客户端/服务端经localhost UDP执行7次调用：读取10个Confirmed DTC、验证默认会话清除拒绝、完成Extended Session与Seed/Key、授权清除并确认末态0个Active DTC。线协议将传输错误与诊断应用状态分层，DTC使用固定九字节记录。Windows与Linux得到一致的14条运行时Trace和26条诊断Trace；原始报告见`benchmarks/windows-diagnostic-someip-evidence-v1.json`与`benchmarks/linux-diagnostic-someip-evidence-v1.json`。
 
 这是UDS风格的诊断状态核心、类型化服务接口与项目有界SOME/IP映射，不是完整ISO 14229或AUTOSAR实现；当前没有CAN-TP、DoIP、标准UDS Service/NRC一致性、Service Discovery或真实诊断仪互操作。
 

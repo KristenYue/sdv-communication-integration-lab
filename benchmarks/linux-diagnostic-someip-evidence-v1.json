@@ -1,0 +1,21 @@
+{
+  "schema_version": "sdv-diagnostic-someip-evidence-v1",
+  "data_boundary": "localhost_udp_bounded_someip_diagnostic_mapping;not_autosar_uds_doip_can_tp_or_physical_ecu_evidence",
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "server_ready": "READY port=30496 mode=diagnostic requests=7",
+  "client_id": 97,
+  "requests": 7,
+  "initial_dtcs": 10,
+  "records_valid": true,
+  "seed_nonzero": true,
+  "final_dtcs": 0,
+  "default_clear_status": "SESSION_DENIED",
+  "authorized_clear_status": "OK",
+  "wire_status_codes": {
+    "OK": 0,
+    "SESSION_DENIED": 1
+  },
+  "runtime_trace_events": 14,
+  "diagnostic_trace_events": 26,
+  "server_active_dtcs": 0
+}
