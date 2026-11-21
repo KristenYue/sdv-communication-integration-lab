@@ -1,0 +1,17 @@
+{
+  "schema_version": "sdv-diagnostic-evidence-v1",
+  "data_boundary": "bounded_uds_style_state_machine_and_synthetic_dtcs;not_iso_14229_conformance_or_physical_ecu_diagnostics",
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "registered_dtcs": 20,
+  "failure_reports": 40,
+  "same_cycle_replays": 20,
+  "confirmed_before_restart": 20,
+  "freeze_frames_before_restart": 20,
+  "recovered_confirmed": 20,
+  "unauthorized_clears": 30,
+  "security_lockouts": 20,
+  "authorized_clear": true,
+  "active_after_clear_restart": 0,
+  "corruption_rejected": true,
+  "trace_events": 166
+}

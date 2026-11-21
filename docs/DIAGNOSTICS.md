@@ -43,9 +43,9 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 
 这证明进程重启恢复和损坏记录失败关闭，不证明突然断电时的文件系统屏障、磨损管理、双分区NVM或量产NvM语义。
 
-## Windows证据
+## Windows与Linux证据
 
-`benchmarks/windows-diagnostic-evidence-v1.json`记录：
+`benchmarks/windows-diagnostic-evidence-v1.json`与`benchmarks/linux-diagnostic-evidence-v1.json`记录：
 
 - 20个DTC、40个跨周期失败报告，20/20进入Confirmed；
 - 20次同周期重复失败没有把Occurrence从2错误放大；
@@ -57,4 +57,4 @@ Seed/Key算法是确定性的项目测试算法，仅用于验证会话、挑战
 - 人工损坏Journal后恢复失败关闭；
 - 全流程产生166条诊断Trace事件。
 
-CI同时在Windows和Linux重新运行相同证据程序。
+两平台得到相同的状态计数与166条Trace；平台字段保留各自原始运行环境。
