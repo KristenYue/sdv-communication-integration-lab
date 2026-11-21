@@ -1,0 +1,27 @@
+{
+  "schema_version": "sdv-cpp-socketcan-v1",
+  "socketcan_used": true,
+  "transport_boundary": "linux_virtual_can_not_physical_vehicle_bus",
+  "interface": "vcan0",
+  "frame_count": 8,
+  "diagnostic_bridge_enabled": true,
+  "results": [
+    {"frame_id": 256, "dlc": 8, "payload_hex": "1027500000000000", "accepted": true, "code": "APPLIED"},
+    {"frame_id": 256, "dlc": 8, "payload_hex": "0c62500000000000", "accepted": false, "code": "SIGNAL_OUT_OF_RANGE"},
+    {"frame_id": 258, "dlc": 7, "payload_hex": "000f010000000000", "accepted": false, "code": "INVALID_DLC"},
+    {"frame_id": 1911, "dlc": 8, "payload_hex": "0000000000000000", "accepted": false, "code": "UNKNOWN_CAN_ID"},
+    {"frame_id": 256, "dlc": 8, "payload_hex": "1027500000000000", "accepted": true, "code": "APPLIED"},
+    {"frame_id": 256, "dlc": 8, "payload_hex": "0c62500000000000", "accepted": false, "code": "SIGNAL_OUT_OF_RANGE"},
+    {"frame_id": 258, "dlc": 7, "payload_hex": "000f010000000000", "accepted": false, "code": "INVALID_DLC"},
+    {"frame_id": 1911, "dlc": 8, "payload_hex": "0000000000000000", "accepted": false, "code": "UNKNOWN_CAN_ID"}
+  ],
+  "diagnostic": {
+    "cycles": 2,
+    "active_dtcs": 6,
+    "confirmed_dtcs": 6,
+    "freeze_frames": 6,
+    "occurrence_count_two": 6,
+    "wire_dtcs": 6,
+    "trace_events": 18
+  }
+}

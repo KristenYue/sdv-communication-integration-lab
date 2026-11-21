@@ -2,6 +2,8 @@
 
 面向智能汽车平台软件、车载服务运行时、通信中间件与系统集成岗位的可复现研发项目。项目主体是C++车辆通信与服务软件；仿真、故障注入和回放用于证明这些核心模块的正确性与可靠性，不作为测试执行型项目定位。
 
+用于校招简历时只保留“平台内核、通信诊断闭环、系统集成证据”三条主线，具体JD映射和可写边界见[简历定位说明](docs/RESUME_POSITIONING.md)。
+
 最终形态是一个 **Vehicle Service Runtime & Integration Platform（车载服务运行时与通信集成平台）**：底层接入CAN与车载服务通信，中间层提供车辆服务注册、发现、调用、超时、取消、权限和状态管理，上层可按岗位选择接入诊断工具、车云任务或受控AI Agent，而不把通用Agent框架作为唯一主线。
 
 当前第一阶段已经建立一条不依赖物理车辆的最小真实链路：
@@ -213,6 +215,8 @@ python scripts/verify_vcan.py --interface vcan0 --output artifacts/linux-vcan.js
 ```
 
 GitHub Linux Runner已经创建真实内核`vcan0`接口：C++ `PF_CAN/CAN_RAW`网关接收VCU和TPMS两帧并返回2/2 `APPLIED`；Python独立路径从同一接口解码出230/231/229/232 kPa四轮胎压。原始证据见`benchmarks/linux-cpp-socketcan-v1.json`、`benchmarks/linux-vcan-decoder-v1.json`和`benchmarks/linux-vcan-interface-v1.txt`。这仍是虚拟CAN，不是物理CAN控制器、线束或量产ECU。
+
+同一Linux原生路径已完成诊断闭环：`vcan0 → C++ SocketCAN网关 → 周期级故障监控 → DTC/Freeze Frame → 类型化服务与SOME/IP读取`。8个实际接收帧形成两次有效更新及各两次信号越界、DLC错误和未知ID；结合三个缺失节点超时，最终确认6/6 DTC并通过线协议读取6个DTC。原始报告见`benchmarks/linux-socketcan-diagnostic-chain-v1.json`。
 
 ## 从现有资产复用了什么
 

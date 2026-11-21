@@ -44,7 +44,7 @@ VehicleGateway --> GatewayDiagnosticBridge --> DiagnosticManager
 
 Path A exists to exercise process lifecycle, multiple signal owners, restarts, correlation IDs and deterministic scenario assertions on both Windows and Linux. Its queue is orchestration infrastructure, not an automotive network.
 
-Path B exists to prove that the C++ data plane can receive native Linux CAN frames. `vcan0` is a kernel virtual CAN interface, not a physical CAN controller, vehicle harness or production ECU.
+Path B proves that the C++ data plane can receive native Linux CAN frames. Its diagnostic mode also sends the resulting gateway contract and missing-node observations through `GatewayDiagnosticBridge`, `DiagnosticManager` and the bounded SOME/IP read adapter. `vcan0` is a kernel virtual CAN interface, not a physical CAN controller, vehicle harness or production ECU.
 
 Path C is the product-facing service abstraction. Its adapters expose read-only vehicle state and the typed diagnostic lifecycle. A timeout before dispatch means the handler did not run. A timeout or cancellation observed after dispatch returns `COMPLETION_UNKNOWN` because the runtime cannot honestly promise rollback of handler side effects. Diagnostic Session/Seed/Key exchanges require a fresh Request ID for each logical exchange; an identical retry may reuse that ID.
 

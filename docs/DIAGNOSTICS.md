@@ -53,6 +53,8 @@ DiagnosticManager
 
 这些DTC Code、Severity和新鲜度阈值是项目策略。证据使用合成CAN帧与进程内SOME/IP适配器调用，不证明物理总线、电气故障、OEM诊断监控标定或量产故障内存策略。
 
+Linux原生链路进一步在GitHub Ubuntu Runner创建内核`vcan0`，由Python虚拟ECU通过SocketCAN发送8帧，C++ `PF_CAN/CAN_RAW`进程实际接收。两周期均稳定得到`APPLIED`、`SIGNAL_OUT_OF_RANGE`、`INVALID_DLC`、`UNKNOWN_CAN_ID`各一次；缺失的TPMS、BCM和T-Box信号同时形成超时监控。最终6/6 DTC进入Confirmed、6/6 Freeze Frame有效、Occurrence均为2，并由有界SOME/IP适配器读取6个DTC。原始报告见`benchmarks/linux-socketcan-diagnostic-chain-v1.json`。
+
 ## 会话与安全状态
 
 清除DTC必须满足：客户端处于Extended Session、会话未超时、Security Access已经解锁。三次错误Key触发10秒锁定；会话超时不会绕过尚未结束的锁定窗口。成功清除后立即撤销解锁状态。
