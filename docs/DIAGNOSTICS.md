@@ -49,7 +49,7 @@ DiagnosticManager
 
 桥接器在一个Operation Cycle内收集任意数量的帧结果，周期结束时才对每个监控器提交一次Fail或Pass。这样，同周期内高频重复故障不会放大Occurrence；没有故障的周期会显式提交Pass，使Pending清除和Confirmed Aging能够发生。契约故障沿用原始帧Trace ID，超时故障使用周期关闭Trace；首次失败时保存网关完整快照作为Freeze Frame。
 
-`benchmarks/windows-gateway-diagnostic-bridge-evidence-v1.json`记录两次故障周期：每周期包含四组有效车辆帧、四类契约故障，并在周期结束时让四组信号超过新鲜度阈值。结果为8/8 DTC进入Confirmed、8/8 Freeze Frame有效、8/8 Occurrence等于2、8个来源Trace可区分；随后类型化`ReadDTCInformation`与有界SOME/IP解码均返回同一组8个Active DTC。
+`benchmarks/windows-gateway-diagnostic-bridge-evidence-v1.json`与`benchmarks/linux-gateway-diagnostic-bridge-evidence-v1.json`记录两次故障周期：每周期包含四组有效车辆帧、四类契约故障，并在周期结束时让四组信号超过新鲜度阈值。两平台均得到8/8 DTC进入Confirmed、8/8 Freeze Frame有效、8/8 Occurrence等于2、8个来源Trace可区分；随后类型化`ReadDTCInformation`与有界SOME/IP解码均返回同一组8个Active DTC。除运行平台字段外，两份报告逐字段一致。
 
 这些DTC Code、Severity和新鲜度阈值是项目策略。证据使用合成CAN帧与进程内SOME/IP适配器调用，不证明物理总线、电气故障、OEM诊断监控标定或量产故障内存策略。
 

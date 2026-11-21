@@ -1,0 +1,18 @@
+{
+  "schema_version": "sdv-gateway-diagnostic-bridge-evidence-v1",
+  "data_boundary": "synthetic_can_frames_to_gateway_monitors_to_dtc_to_typed_service_and_bounded_someip_adapter;not_physical_can_ecu_or_production_monitoring",
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "registered_monitors": 8,
+  "fault_cycles": 2,
+  "active_dtcs": 8,
+  "confirmed_dtcs": 8,
+  "freeze_frames": 8,
+  "occurrence_count_two": 8,
+  "distinct_source_traces": 8,
+  "typed_service_dtcs": 8,
+  "wire_adapter_dtcs": 8,
+  "wire_decoded": true,
+  "gateway_trace_events": 16,
+  "diagnostic_trace_events": 18,
+  "runtime_trace_events": 4
+}
