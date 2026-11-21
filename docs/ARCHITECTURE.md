@@ -82,7 +82,7 @@ The replay path materializes versioned JSONL tasks from the frozen four-node cor
 
 The local scheduler adds SQLite-backed atomic leases, heartbeat extension, monotonically increasing fencing tokens and idempotent result commits. Four worker threads each own a separate C++ gateway process. This demonstrates worker coordination on one host, not a PostgreSQL or multi-host control plane; see [REPLAY_SCHEDULER.md](REPLAY_SCHEDULER.md).
 
-The PostgreSQL adapter replaces SQLite's database-wide writer serialization with dataset-scoped `FOR UPDATE SKIP LOCKED` claims and database-server lease time. Its PostgreSQL 16 service-container experiment is defined in CI but has not run in the current local environment; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md). Even after that job passes, it remains a single database service and single CI host rather than a high-availability or multi-host deployment.
+The PostgreSQL adapter replaces SQLite's database-wide writer serialization with dataset-scoped `FOR UPDATE SKIP LOCKED` claims and database-server lease time. A PostgreSQL 16.16 service-container run completed 300 tasks through 8 independent C++ gateway workers and 60 lease-control groups; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md). It remains a single database service and single CI host rather than a high-availability or multi-host deployment.
 
 ## Current signal ownership
 
@@ -104,6 +104,6 @@ The PostgreSQL adapter replaces SQLite's database-wide writer serialization with
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
 - physical-vehicle control by an AI or diagnostic agent;
-- S3/MinIO object storage or PostgreSQL execution based only on the local migration contract.
+- S3/MinIO object storage, PostgreSQL high availability or multi-host execution based only on the single-host CI evidence.
 
 Those boundaries remain explicit until the corresponding source, environment record and reproducible result exist.

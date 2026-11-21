@@ -55,7 +55,7 @@ SomeIpMessage make_door_lock_someip_request(std::uint16_t client_id, std::uint16
                                             std::uint8_t door_mask, bool lock) {
     return SomeIpMessage{kVehicleBodySomeIpService, kSetDoorLocksSomeIpMethod, client_id,
                          session_id, 1U, SomeIpMessageType::Request, SomeIpReturnCode::Ok,
-                         {door_mask, lock ? 1U : 0U}};
+                         {door_mask, static_cast<std::uint8_t>(lock ? 1U : 0U)}};
 }
 
 SomeIpMessage handle_vehicle_someip_request(const SomeIpMessage& message,
@@ -126,7 +126,8 @@ SomeIpMessage handle_vehicle_someip_request(const SomeIpMessage& message,
         if (result == nullptr) {
             return error_response(message, SomeIpReturnCode::NotOk);
         }
-        payload = {result->requested_mask, result->locked ? 1U : 0U};
+        payload = {result->requested_mask,
+                   static_cast<std::uint8_t>(result->locked ? 1U : 0U)};
     }
     return SomeIpMessage{message.service_id, message.method_id, message.client_id,
                          message.session_id, 1U, SomeIpMessageType::Response,

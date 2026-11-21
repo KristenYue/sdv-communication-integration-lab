@@ -25,14 +25,14 @@
 
 - [x] C++车辆网关完成帧校验、解码、新鲜度与Trace；
 - [x] DBC子集解析器拒绝不支持的格式；
-- [ ] Linux `vcan0`真实收发（脚本与CI已建立，等待远端CI执行证据）；
+- [x] Linux `vcan0`真实收发：GitHub Linux Runner创建内核虚拟CAN接口，C++ SocketCAN接收VCU/TPMS帧并返回2/2 `APPLIED`，Python独立DBC子集解码四轮胎压；
 - [x] 确定性故障注入器覆盖drop/duplicate/corrupt DLC/delay/stale timestamp；
 - [x] 220个网关契约场景通过独立C++进程执行。注意：它们是帧契约冻结集，不能替代P1要求的200个多节点系统场景。
 
 ### P1：跨进程系统集成
 
 - [x] 虚拟VCU、TPMS、BCM、T-Box与C++ Gateway至少五个进程；
-- [ ] Linux `vcan0` SocketCAN真实执行证据（代码与CI已建立，等待远端Linux环境）；
+- [x] Linux `vcan0` SocketCAN真实执行证据与接口状态、C++接收报告、Python解码报告；
 - [x] 第二种车载服务通信链路：C++ SOME/IP有界头与localhost UDP跨进程请求/响应；不声称Service Discovery或AUTOSAR一致性；
 - [x] 四类CAN消息、独立新鲜度、统一Trace和场景控制面；
 - [x] 两代节点、240帧和4次节点重启的健康链路实验；
@@ -43,15 +43,15 @@
 - [x] 并发In-flight去重与背压：32个相同调用仅执行1次、16个冲突调用全部拒绝；容量满时分别验证`QUEUE_FULL`和`QUEUE_TIMEOUT`；
 - [x] 网络结果未知组合实验：30次服务端执行后丢响应、30次客户端超时；服务重启后重放30个响应、Handler执行0次、重复最终动作0次；
 - [x] 3种频率 × 3种载荷 × 3种节点规模的27格Release性能矩阵，报告吞吐、p50/p95/p99、进程CPU与常驻内存；
-- [ ] 补齐回放数据闭环与Linux真实`vcan0`远端证据；当前Journal不声称断电级持久性。
+- [x] 回放数据闭环与Linux真实`vcan0`远端证据；当前Journal仍不声称断电级持久性。
 
 ### P2：数据闭环
 
 - [x] 本地Parquet/Zstandard列式数据与内容寻址对象：300行任务、1300行帧、300行终态，3个对象完成摘要、Schema、行数和内容读回验证；
-- [ ] MCAP、S3/MinIO对象存储与PostgreSQL实机元数据；PostgreSQL适配器和CI任务已完成，但尚无远端运行报告；
-- [x] PostgreSQL调度后端代码与CI service-container验收任务：服务端时钟、`SKIP LOCKED`、租约、心跳、Fencing和幂等提交；等待远端CI报告后再计入实机证据；
+- [ ] MCAP与S3/MinIO对象存储；PostgreSQL当前只承载数据集和任务调度元数据，尚未完成远端对象元数据联动；
+- [x] PostgreSQL 16.16实机调度证据：8个数据库Worker和8个C++ Gateway完成300/300任务；60组服务端时钟租约、接管、Fencing、幂等和冲突实验全部通过；
 - [x] 本地批量回放Worker、租约、心跳、fencing和幂等提交：4个Worker完成300任务，60组接管与迟到提交实验全部符合预期；
-- [ ] 将SQLite本地元数据原型迁移到PostgreSQL并验证多进程/多主机争抢与故障恢复；
+- [ ] PostgreSQL多主机争抢、数据库进程重启/WAL恢复、主从切换与网络分区；当前证据为单CI主机、单PostgreSQL服务；
 - [x] 300个冻结回放任务及版本化报告：200个独立源场景、2600次双阶段帧提交、300/300摘要一致、聚合SHA-256相同。
 
 ### P3：简历准出

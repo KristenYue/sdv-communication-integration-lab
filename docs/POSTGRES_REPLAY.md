@@ -2,12 +2,7 @@
 
 ## 当前状态
 
-仓库已经实现PostgreSQL后端与GitHub Actions service-container集成任务。本机没有Docker、`psql`或PostgreSQL服务，因此本页区分两种状态：
-
-- 已在本机验证：Python接口、输入约束、SQLite兼容回归、300任务原有调度链路；
-- 等待远端CI产物验证：PostgreSQL migration、8个并发连接/Worker、300个真实C++网关回放任务和60组真实服务端时钟租约实验。
-
-在远端报告产生前，不把PostgreSQL写入已完成的简历数字。
+PostgreSQL后端已在GitHub Actions的PostgreSQL 16.16 service container完成实机验证。CI运行环境为单个Linux Runner和单个数据库服务，不等同于多主机或高可用部署。原始报告为`benchmarks/linux-postgres-replay-v1.json`，对应Actions运行ID为`44859390733`。
 
 ## 一致性设计
 
@@ -37,17 +32,13 @@ LIMIT 1;
 
 ## 集成实验
 
-CI中的PostgreSQL 16 service container使用全新数据库执行migration。8个Python Worker各自持有独立C++ Gateway进程，并且每次Store操作创建独立数据库连接。目标验收包括：
+CI中的PostgreSQL 16.16 service container使用全新数据库执行migration。8个Python Worker各自持有独立C++ Gateway进程，并且每次Store操作创建独立数据库连接。实测结果：
 
-- 300/300任务完成且符合冻结契约；
-- 输出聚合摘要与单Worker、SQLite Worker实验一致；
+- 300/300任务完成且符合冻结契约，耗时11.86秒；
+- 8个Worker分别提交37/39/38/38/37/36/38/37个任务；
+- 输出聚合摘要`385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1`与单Worker、SQLite Worker实验一致；
 - 重新创建Store连接后仍能读取300个终态；
-- 60次Heartbeat生效；
-- 60次租约有效期内接管被阻止；
-- 60次过期接管成功且Token递增；
-- 60次旧Worker提交被Fence；
-- 60次获胜结果幂等重放；
-- 60次不同结果冲突被拒绝。
+- Heartbeat、租约有效期内阻止接管、过期接管、旧Worker Fencing、获胜结果幂等重放和不同结果冲突拒绝均为60/60。
 
 这里的“重新连接”只证明元数据跨客户端连接持久存在，不代表PostgreSQL进程重启、主从切换或灾难恢复。
 

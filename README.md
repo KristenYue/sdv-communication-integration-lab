@@ -94,7 +94,7 @@ Windows 11 / MSVC `/O2`本地实测：3600/3600调用成功，最低吞吐达成
 
 基线阶段和回放阶段分别启动全新的C++网关进程，记录有序返回码、接受状态、CAN ID、Trace ID和完整终态快照，并生成每任务SHA-256。Windows实测两阶段共提交2600帧，600/600次预期契约校验通过，300/300任务摘要一致、差异0项，基线与回放聚合SHA-256均为`385722a0d868c5014f2ee0f7326c5e5e547eac9569981d9a05dfc9c7a5c700b1`。原始报告见`benchmarks/windows-replay-v1.json`，方法见[回放管线说明](docs/REPLAY_PIPELINE.md)。
 
-JSONL是规范输入与版本控制格式；下述本地数据层已增加Parquet与内容寻址对象，但还没有MCAP、S3/MinIO或PostgreSQL实机证据，不能描述成量产自动驾驶数据闭环平台。
+JSONL是规范输入与版本控制格式；下述本地数据层已增加Parquet与内容寻址对象，任务调度元数据已在PostgreSQL 16.16上执行，但还没有MCAP、S3/MinIO或多主机调度，不能描述成量产自动驾驶数据闭环平台。
 
 ### 租约Worker、心跳与Fencing
 
@@ -110,7 +110,7 @@ SQLite和单机线程协调器只是可复现元数据原型，不代表PostgreS
 
 Windows本地实测生成3个不可变对象，总计21,257字节，三表读回全部一致；逻辑数据集SHA-256仍为`c185f947b364ce144518c7e9dd40574ed6f5b90d6839ce68896a0c49abe5e980`。原始报告见`benchmarks/windows-replay-storage-v1.json`，契约见[回放数据存储说明](docs/DATA_STORAGE.md)。
 
-该实现是本地内容寻址文件系统加SQLite元数据，不是云对象存储。仓库已增加PostgreSQL调度后端及PostgreSQL 16 CI集成任务，采用数据库服务端时钟、`FOR UPDATE SKIP LOCKED`和Fencing Token；由于本机没有PostgreSQL或容器运行时，远端报告产生前不作为实机数字。设计和状态见[PostgreSQL回放后端](docs/POSTGRES_REPLAY.md)。
+该实现仍以本地内容寻址文件系统保存Parquet，不是云对象存储。PostgreSQL 16.16实机调度采用数据库服务端时钟、`FOR UPDATE SKIP LOCKED`和Fencing Token：8个Worker各持有独立C++ Gateway，完成300/300任务和300/300预期契约匹配，11.86秒内提交完成，输出聚合SHA-256与单Worker及SQLite实验一致。60组Heartbeat、提前接管阻止、过期接管、旧Token Fencing、幂等重放和结果冲突实验均为60/60。原始报告见`benchmarks/linux-postgres-replay-v1.json`，设计和边界见[PostgreSQL回放后端](docs/POSTGRES_REPLAY.md)。
 
 ## SOME/IP有界跨进程链路
 
@@ -191,6 +191,8 @@ sudo ip link add dev vcan0 type vcan
 sudo ip link set vcan0 up
 python scripts/verify_vcan.py --interface vcan0 --output artifacts/linux-vcan.json
 ```
+
+GitHub Linux Runner已经创建真实内核`vcan0`接口：C++ `PF_CAN/CAN_RAW`网关接收VCU和TPMS两帧并返回2/2 `APPLIED`；Python独立路径从同一接口解码出230/231/229/232 kPa四轮胎压。原始证据见`benchmarks/linux-cpp-socketcan-v1.json`、`benchmarks/linux-vcan-decoder-v1.json`和`benchmarks/linux-vcan-interface-v1.txt`。这仍是虚拟CAN，不是物理CAN控制器、线束或量产ECU。
 
 ## 从现有资产复用了什么
 

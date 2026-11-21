@@ -36,6 +36,6 @@ An additional 60 deterministic lease-control experiments verify heartbeat protec
 
 ## PostgreSQL migration path
 
-`PostgresReplayJobStore` preserves the same lease/heartbeat/fencing/commit contract while replacing the SQLite-wide write transaction with dataset-scoped row locks and `FOR UPDATE SKIP LOCKED`. All lease decisions use PostgreSQL server time. A dedicated CI job provisions PostgreSQL 16 and is designed to execute 8 independent database connections and C++ gateway processes; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md).
+`PostgresReplayJobStore` preserves the same lease/heartbeat/fencing/commit contract while replacing the SQLite-wide write transaction with dataset-scoped row locks and `FOR UPDATE SKIP LOCKED`. All lease decisions use PostgreSQL server time. A dedicated CI job provisions PostgreSQL 16.16 and executes 8 independent database connections and C++ gateway processes; see [POSTGRES_REPLAY.md](POSTGRES_REPLAY.md).
 
-The PostgreSQL job has not been executed on this local Windows environment because no PostgreSQL or container runtime is installed. Until the remote CI report exists, this is implemented integration coverage rather than measured PostgreSQL evidence.
+The measured CI run completed 300/300 replay tasks with 300 expected-contract matches and the same aggregate digest as the single-worker and SQLite runs. Sixty lease-control groups passed all heartbeat, takeover, fencing, idempotency and conflict checks. This remains a single-host, single-database-service experiment, not multi-host or high-availability evidence.

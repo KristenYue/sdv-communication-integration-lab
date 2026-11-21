@@ -2,7 +2,7 @@
 
 ## 目标与边界
 
-本层把版本化JSONL回放任务规范化成可分析、可校验的列式数据，而不是把JSON文件简单改后缀。当前证据覆盖本地Parquet/Zstandard、SHA-256内容寻址文件和SQLite元数据事务；不声称已运行S3、MinIO或PostgreSQL。
+本层把版本化JSONL回放任务规范化成可分析、可校验的列式数据，而不是把JSON文件简单改后缀。当前证据覆盖本地Parquet/Zstandard、SHA-256内容寻址文件和SQLite对象元数据事务；PostgreSQL 16.16已经验证任务调度元数据，但尚未承载远端对象生命周期。不声称已运行S3或MinIO。
 
 ```text
 300个版本化ReplayTask
@@ -39,7 +39,7 @@
 
 ## 迁移接口
 
-`migrations/0001_postgresql_replay_metadata.sql`固定了PostgreSQL表和约束，可承载数据集、不可变对象以及带Lease/Fencing的任务状态。仓库已实现对应调度适配器和PostgreSQL 16 CI service-container任务；由于本机没有PostgreSQL或容器运行时，远端报告产生前仍不把它计为实机运行证据。详细状态见[PostgreSQL回放后端](POSTGRES_REPLAY.md)。
+`migrations/0001_postgresql_replay_metadata.sql`固定了PostgreSQL表和约束，可承载数据集、不可变对象以及带Lease/Fencing的任务状态。PostgreSQL 16.16 CI已经完成数据集与任务调度元数据验证；`replay_objects`与S3/MinIO的端到端对象生命周期仍待实现。详细状态见[PostgreSQL回放后端](POSTGRES_REPLAY.md)。
 
 本地复现：
 

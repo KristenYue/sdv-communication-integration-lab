@@ -1,0 +1,11 @@
+{
+  "schema_version": "sdv-cpp-socketcan-v1",
+  "socketcan_used": true,
+  "transport_boundary": "linux_virtual_can_not_physical_vehicle_bus",
+  "interface": "vcan0",
+  "frame_count": 2,
+  "results": [
+    {"frame_id": 256, "dlc": 8, "payload_hex": "39304b0100000000", "accepted": true, "code": "APPLIED"},
+    {"frame_id": 257, "dlc": 8, "payload_hex": "e600e700e500e800", "accepted": true, "code": "APPLIED"}
+  ]
+}

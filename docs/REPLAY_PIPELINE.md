@@ -37,4 +37,4 @@ The canonical output includes ordered result code, acceptance flag, CAN ID, Trac
 
 The Windows report contains 300 tasks, 200 unique source scenarios, 2,600 total frame submissions, 600/600 expected-contract matches and 300/300 deterministic digest matches. Both aggregate output hashes are identical.
 
-The current format is JSONL plus JSON reports. MCAP/Parquet, object storage, PostgreSQL metadata, leases, heartbeats, fencing, multi-worker scheduling and long-term retention are not implemented yet. The two phases each use one fresh gateway process; this is not a distributed replay cluster.
+JSONL remains the canonical version-control format. Replay tasks are also normalized into Parquet/Zstandard task, frame and expected-state tables stored in a local content-addressed file store. SQLite and PostgreSQL 16.16 backends implement leases, heartbeats, fencing and multi-worker scheduling; the PostgreSQL run used 8 C++ gateway workers. MCAP, S3/MinIO, long-term retention, multi-host workers and high availability are not implemented. The baseline/replay comparison itself still uses one fresh gateway process per phase and is not a distributed replay cluster.
