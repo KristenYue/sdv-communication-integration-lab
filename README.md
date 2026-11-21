@@ -72,6 +72,16 @@ Windows本地实测：32个线程同时提交同一状态变更，32个调用全
 
 当前属于单进程多线程准入控制，Handler仍运行在调用方线程；不声称具备内部线程池、优先级调度、公平性、实时性或跨进程并发仲裁。
 
+## 车辆诊断与DTC生命周期
+
+`DiagnosticManager`把合成车辆故障提升为有状态诊断记录：DTC必须预注册；同一Operation Cycle内重复失败不增加Occurrence；首个失败周期进入Pending并冻结车辆快照，连续第二个失败周期进入Confirmed；两个通过周期清除Pending、三个通过周期老化Confirmed。Freeze Frame保存速度、电量、车门、四轮胎压、BCM和T-Box关键状态。
+
+诊断访问采用有界的Default/Extended Session、5秒会话超时、Seed/Key挑战和三次错误Key后的10秒Lockout。清除DTC必须处于Extended Session且已解锁，清除后撤销权限。该Seed/Key仅是状态机测试算法，不是量产密码学。
+
+Windows本地证据包含20个DTC、40个跨周期失败报告和20次同周期重复报告：20/20进入Confirmed、20/20 Freeze Frame保留，重启后恢复20/20；30次未授权清除全部拒绝，20组错误Key全部进入Lockout；授权清除后再次重启Active DTC为0，损坏Journal失败关闭，全流程产生166条Trace。原始报告见`benchmarks/windows-diagnostic-evidence-v1.json`，完整语义与边界见[诊断说明](docs/DIAGNOSTICS.md)。
+
+这是UDS风格的诊断状态核心，不是完整ISO 14229实现；当前没有CAN-TP、DoIP、标准Service ID/NRC一致性或真实诊断仪互操作。
+
 ### 网络结果未知与重启重试
 
 SOME/IP有界链路新增`vehicle.body/SetDoorLocks`状态变更方法。故障实验让第一服务进程正常执行指令并持久化终态，但在UDP层故意丢弃响应；客户端只能观察到超时。随后服务端携带同一Journal重启，客户端使用相同Client ID、Session ID和Payload重试，运行时重放原始响应而不再次进入Handler。

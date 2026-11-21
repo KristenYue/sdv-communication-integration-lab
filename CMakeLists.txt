@@ -20,6 +20,7 @@ else()
 endif()
 
 add_library(sdv_core
+  cpp/src/diagnostic_manager.cpp
   cpp/src/fault_injector.cpp
   cpp/src/idempotency_journal.cpp
   cpp/src/someip.cpp
@@ -67,6 +68,9 @@ if(WIN32)
   target_link_libraries(sdv_performance_matrix PRIVATE psapi)
 endif()
 
+add_executable(sdv_diagnostic_evidence cpp/src/diagnostic_evidence.cpp)
+target_link_libraries(sdv_diagnostic_evidence PRIVATE sdv_core)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(sdv_socketcan_gateway cpp/src/socketcan_gateway.cpp)
   target_link_libraries(sdv_socketcan_gateway PRIVATE sdv_core)
@@ -88,4 +92,8 @@ add_test(NAME sdv_someip_tests COMMAND sdv_someip_tests)
 add_executable(sdv_vehicle_someip_adapter_tests cpp/tests/test_vehicle_someip_adapter.cpp)
 target_link_libraries(sdv_vehicle_someip_adapter_tests PRIVATE sdv_core)
 add_test(NAME sdv_vehicle_someip_adapter_tests COMMAND sdv_vehicle_someip_adapter_tests)
+
+add_executable(sdv_diagnostic_manager_tests cpp/tests/test_diagnostic_manager.cpp)
+target_link_libraries(sdv_diagnostic_manager_tests PRIVATE sdv_core)
+add_test(NAME sdv_diagnostic_manager_tests COMMAND sdv_diagnostic_manager_tests)
 

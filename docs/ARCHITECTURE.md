@@ -63,6 +63,7 @@ Path D carries that read-only method across two C++ processes using a bounded SO
 | replay workers | Python threads + C++ processes | Leased task execution through independent gateway processes |
 | replay object store | Python + Arrow + SQLite | Explicit Parquet schemas, content-addressed files, metadata and verified readback |
 | PostgreSQL replay store | Python + PostgreSQL | Server-clock leases, row-level claims, fencing and idempotent result commits |
+| `DiagnosticManager` | C++20 | Operation-cycle DTC state, freeze frames, sessions, security lockout, clear and journal recovery |
 
 ## Idempotency boundary
 
@@ -104,6 +105,7 @@ The PostgreSQL adapter replaces SQLite's database-wide writer serialization with
 - deterministic real-time guarantees;
 - production safety, cybersecurity or functional-safety certification;
 - physical-vehicle control by an AI or diagnostic agent;
+- complete ISO 14229, CAN-TP or DoIP conformance and diagnostic-tool interoperability;
 - S3/MinIO object storage, PostgreSQL high availability or multi-host execution based only on the single-host CI evidence.
 
 Those boundaries remain explicit until the corresponding source, environment record and reproducible result exist.
